@@ -1,0 +1,9 @@
+data/
+model_mesa_*/
+PAPER/
+model_default/
+.idea/
+__pycache__/
+*/__pycache__/
+test
+net/compression_rate_calculate_1/src/net/checkpoint*

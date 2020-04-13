@@ -1,0 +1,1 @@
+python main.py -lmd ../model/deepc/model_quantized_retrain300.ptmodel -lmq ../model/fc_q/model_quantized_retrain300.ptmodel -lmm ../model/mesa/checkpoint_quantized_re_alpha_0.0_0.tar -lmp ../model/mpd/checkpoint_initial_p_alpha_0.0_59.tar -lmi ../model/fc/model_initial_end.ptmodel -p fc1=10,fc2=10,fc3=4 -b conv=8,fc=5 -tm d -sd ../output_compression
