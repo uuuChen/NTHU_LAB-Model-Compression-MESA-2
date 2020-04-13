@@ -98,7 +98,7 @@ parser.add_argument('--train-mode', '-tm', default=1, type=int, metavar='M',
                           '4:initial+prune cnn+qauntize 5:initial+quantize 6:load model+pruning+quantize')
 
 # ---------- prune mode -----------------------------------------------------
-parser.add_argument('--prune-mode', '-pm', default='filter', type=str, metavar='M',
+parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, metavar='M',
                     help='filter: pruned by filter percentile: pruned by percentile channel: pruned by channel\n')
 
 # ---------- dnn or cnn or all -----------------------------------------------------
@@ -137,7 +137,7 @@ def main():
             print("-------load "+f"{args.load_model} ----")
             model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
             model = util.load_checkpoint(model,  f"{args.load_model}", args)
-            model = pruning_process(model, args.prune_rates)
+            model = pruning_process(model)
         else:
             print("---not found "+f"{args.load_model} ----")
     elif args.train_mode == 3:
@@ -150,7 +150,7 @@ def main():
     elif args.train_mode == 4:  # initial train/ prune cnn/ qauntize
         model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
         model = initial_process(model)
-        model = pruning_process(model, args.prune_rates)
+        model = pruning_process(model)
         quantize_process(model)
     elif args.train_mode == 5:  # initial train/ qauntize
         model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
@@ -161,7 +161,7 @@ def main():
             print("-------load "+f"{args.load_model} ----")
             model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
             model = util.load_checkpoint(model, f"{args.load_model}", args)
-            model = pruning_process(model, args.prune_rates)
+            model = pruning_process(model)
             model = quantize_process(model)
         else:
             print("---not found "+f"{args.load_model} ----")
@@ -183,7 +183,7 @@ def main():
             model = util.load_checkpoint(model, f"{args.load_model}", args)
         else:
             model = initial_process(model)
-        model = pruning_process(model, args.prune_rates)
+        model = pruning_process(model)
         model = quantize_process(model)
     elif args.train_mode == 10:
         if os.path.isfile(f"{args.load_model}"):
@@ -193,6 +193,11 @@ def main():
             model = initial_process(model)
         else:
             print("---not found " + f"{args.load_model} ----")
+    elif args.train_mode == 11:  # for filter-gm
+        model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
+        model = initial_process(model)
+        model = pruning_process(model)
+        model = quantize_process(model)
 
 
 def initial_process(model):
@@ -214,7 +219,7 @@ def initial_process(model):
     return model
 
 
-def pruning_process(model, prune_rates):
+def pruning_process(model):
     print("------------------------- Before pruning --------------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy = util.validate(val_loader, model, args)
@@ -224,12 +229,15 @@ def pruning_process(model, prune_rates):
         conv_idx = 0
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-                model.prune_by_percentile([name], q=100*prune_rates[conv_idx])
+                model.prune_by_percentile([name], q=100*args.prune_rates[conv_idx])
                 conv_idx += 1
-    elif args.prune_mode == 'filter' or args.prune_mode == "channel":
-        if args.prune_mode == 'f':
-            prune_rates = util.get_model_conv_actual_pruning_rates(model, prune_rates)
-        model.prune_step(prune_rates, mode=args.prune_mode)
+    elif 'filter' in args.prune_mode or "channel" in args.prune_mode:
+        if args.prune_mode != 'filter-gm':  # filter-gm prunes model during initial_train
+            prune_rates = args.prune_rates
+            if 'filter' in args.prune_mode:
+                prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
+            model.prune_step(prune_rates, mode=args.prune_mode)
+        model.set_conv_prune_indice_dict(mode=args.prune_mode)
 
     print("------------------------------- After prune CNN ----------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")

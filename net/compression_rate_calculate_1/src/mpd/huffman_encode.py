@@ -269,7 +269,7 @@ def mpd_huffman_encode(val_loader ,model_path ,args):
     print('edit_total bytes after compression:{}\n'.format(edit_compressed))
 
     compressed = conv_compressed + fc_compressed
-    if args.model_mode == 'c' and (args.prune_mode == 'filter' or args.prune_mode == 'channel'):
+    if args.model_mode == 'c' and ('filter' in args.prune_mode or 'channel' in args.prune_mode):
         compressed += indice_compressed
 
     util.log(f"{args.log}", f"\n\n------------------------------------")

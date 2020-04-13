@@ -9,6 +9,11 @@ from torch.nn.modules.utils import _pair
 
 
 class PruningModule(Module):
+    def __init__(self):
+        super(PruningModule, self).__init__()
+        self.conv2pruneIndiceDict = dict()
+        self.conv2leftIndiceDict = dict()
+
     def prune_by_percentile(self, layerlist, q=5.0):
         """
         Note:
@@ -55,46 +60,52 @@ class PruningModule(Module):
         module.weight.data = torch.from_numpy(tensor * new_mask).to(weight_dev)
         module.mask.data = torch.from_numpy(new_mask).to(mask_dev)
 
-    def prune_step(self, prune_rates, mode='filter'):
+    def prune_step(self, prune_rates, mode='filter-norm'):
         dim = 0
         conv_idx = 0
         prune_indices = None
         for name, module in self.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-                if mode == 'filter':
+                if 'filter' in mode:
                     if dim == 1:
-                        self._prune_by_indices(module, dim, prune_indices)
+                        self._prune_by_indice(module, dim, prune_indices)
                         dim ^= 1
-                    prune_indices = self._get_prune_indices(module.weight.data, prune_rates[conv_idx], mode=mode)
-                    self._prune_by_indices(module, dim, prune_indices)
+                    prune_indices = self._get_prune_indice(module.weight.data, prune_rates[conv_idx], mode=mode)
+                    self._prune_by_indice(module, dim, prune_indices)
                     dim ^= 1
-                elif mode == 'channel':
+                elif 'channel' in mode:
                     dim = 1
-                    prune_indices = self._get_prune_indices(module.weight.data, prune_rates[conv_idx], mode=mode)
-                    self._prune_by_indices(module, dim, prune_indices)
+                    prune_indices = self._get_prune_indice(module.weight.data, prune_rates[conv_idx], mode=mode)
+                    self._prune_by_indice(module, dim, prune_indices)
+                print(prune_indices)
                 conv_idx += 1
 
             elif isinstance(module, torch.nn.BatchNorm2d):
-                if mode == 'filter' and dim == 1:
-                    self._prune_by_indices(module, 0, prune_indices)
+                if 'filter' in mode and dim == 1:
+                    self._prune_by_indice(module, 0, prune_indices)
 
-    def _get_prune_indices(self, conv_tensor, prune_rate, mode='filter'):
+    def _get_prune_indice(self, conv_tensor, prune_rate, mode='filter-norm'):
         if conv_tensor.is_cuda:
             conv_tensor = conv_tensor.cpu()
+        conv_arr = conv_tensor.numpy()
         sum_of_objects = None
         object_nums = None
-        if mode == 'filter':
-            sum_of_objects = torch.sum(torch.abs(conv_tensor.reshape(conv_tensor.size(0), -1)), 1)
-            object_nums = conv_tensor.size(0)
-        elif mode == 'channel':
-            perm_conv_tensor = conv_tensor.permute(1, 0, 2, 3)  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
-            sum_of_objects = torch.sum(torch.abs(perm_conv_tensor.reshape(perm_conv_tensor.size(0), -1)), 1)
-            object_nums = conv_tensor.size(1)
-        _, object_indices = torch.sort(sum_of_objects)
+        if mode == 'filter-norm':
+            sum_of_objects = np.sum(np.abs(conv_arr.reshape(conv_arr.shape[0], -1)), 1)
+            object_nums = conv_arr.shape[0]
+        elif mode == 'channel-norm':
+            perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
+            sum_of_objects = np.sum(np.abs(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1)), 1)
+            object_nums = conv_tensor.shape[1]
+        elif mode == 'filter-gm':
+            filters_flat_arr = conv_arr.reshape(conv_arr.shape[0], -1)
+            sum_of_objects = np.array([np.sum(np.power(filters_flat_arr - arr, 2)) for arr in filters_flat_arr])
+            object_nums = conv_arr.shape[0]
+        object_indices = np.argsort(sum_of_objects)
         pruned_object_nums = round(object_nums * prune_rate)
-        return object_indices[:pruned_object_nums].tolist()
+        return object_indices[:pruned_object_nums]
 
-    def _prune_by_indices(self, module, dim, indices):
+    def _prune_by_indice(self, module, dim, indices):
         if dim == 0:
             if len(module.weight.size()) == 4:  # conv layer
                 module.weight.data[indices, :, :, :] = 0.0
@@ -103,6 +114,70 @@ class PruningModule(Module):
             module.bias.data[indices] = 0.0
         elif dim == 1:
             module.weight.data[:, indices, :, :] = 0.0  # only happened to conv layer
+
+    def get_conv_actual_prune_rates(self, prune_rates, mode='filter'):
+        """ Suppose the model prunes some filters (filters, :, :, :) or channels (:, channels, :, :). """
+        conv_idx = 0
+        prune_filter_nums = None
+        new_pruning_rates = []
+        for name, module in self.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+                conv_shape = module.weight.shape
+                filter_nums = conv_shape[0]
+                channel_nums = conv_shape[1]
+
+                target_filter_prune_rate = target_channel_prune_rate = prune_rates[conv_idx]
+
+                # If the filter of the previous layer is prune, the channel corresponding to this layer must also be
+                # prune
+                # Conv Shape: (fn, cn, kh, kw)
+                # (1 - prune_rate) = ((fn * (1 - new_prune_rate)) * (cn - Prune_filter_nums) * kh * kw) / (fn * cn * kh
+                # * kw)
+                if conv_idx != 0:
+                    target_filter_prune_rate = (
+                            1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
+                    )
+                prune_filter_nums = round(filter_nums * target_filter_prune_rate)
+                actual_filter_prune_rate = prune_filter_nums / filter_nums
+                filter_bias = abs(actual_filter_prune_rate - target_filter_prune_rate)
+
+                prune_channel_nums = round(channel_nums * target_channel_prune_rate)
+                actual_channel_prune_rate = prune_channel_nums / channel_nums
+                channel_bias = abs(actual_channel_prune_rate - target_channel_prune_rate)
+
+                print('{}'.format(name))
+
+                if mode == 'filter':
+                    print(f'original filter nums: {filter_nums:4} | prune filter nums: {prune_filter_nums:4} | target '
+                          f'filter prune rate: {target_filter_prune_rate * 100.:.2f}% | actual filter prune rate'
+                          f': {actual_filter_prune_rate * 100.:.2f}% | filter bias: {filter_bias * 100.:.2f}%\n')
+                    new_pruning_rates.append(actual_filter_prune_rate)
+
+                elif mode == 'channel':
+                    print(
+                        f'original channel nums: {channel_nums:4} | prune channel nums: {prune_channel_nums:4} | target'
+                        f'channel prune rate: {target_channel_prune_rate * 100.:.2f}% | actual '
+                        f'channel prune rate: {actual_channel_prune_rate * 100.:.2f}% | channel bias: '
+                        f'{channel_bias * 100.:.2f}%\n')
+                    new_pruning_rates.append(actual_channel_prune_rate)
+
+                conv_idx += 1
+
+        return new_pruning_rates
+
+    def set_conv_prune_indice_dict(self, mode='filter-norm'):
+        pruned_indice = left_indice = None
+        for name, module in self.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+                conv_arr = module.weight.data.cpu().numpy()
+                if 'filter' in mode:
+                    pruned_indice = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
+                elif 'channel' in mode:
+                    perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
+                    pruned_indice = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
+                left_indice = list(set(range(conv_arr.shape[0])).difference(pruned_indice))
+                self.conv2pruneIndiceDict[name] = pruned_indice
+                self.conv2leftIndiceDict[name] = left_indice
 
 
 class _ConvNd(Module):

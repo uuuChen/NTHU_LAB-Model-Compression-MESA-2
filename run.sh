@@ -18,9 +18,10 @@ python main.py -mm None -tm 8 -b 5 -al 0.1 -lr 0.1  -ep 150 -qep 10 -sd model_me
 # train with conv penalty
 python main.py -mm c -tm 8 -b 5 -be 0.1 -lr 0.1 -ep 200 -qep 20 -sd model_mesa_0.1_filter_conv
 # train from scratch or load checkpoint with conv penalty and prune and quantize
-python main.py -mm c -tm 9 -b 5 -pm filter -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_filter_conv -lm model_mesa_0.1_filter_conv/checkpoint_initial_alpha_0.1_200.tar
-
-python main.py -mm c -tm 9 -b 5 -pm percentile -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_percentile_conv -lm model_mesa_0.1_percentile_conv/checkpoint_initial_alpha_0.1_149.tar
+python main.py -mm c -tm 9 -b 5 -pm filter-norm -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_filter_conv -lm model_mesa_0.1_filter_conv/checkpoint_initial_alpha_0.1_200.tar
+# train with conv geometric-median
+python main.py -mm c -tm 11 -b 5 -pm filter-gm -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_filter_gm_conv
+python main.py -mm c -tm 9 -b 5 -pm filter-gm -be 1.0 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_1.0_filter_gm_conv -lm model_mesa_0.1_filter_gm_conv/checkpoint_initial_alpha_0.1_188.tar
 
 #######################
 # fc
@@ -42,4 +43,4 @@ python main.py -mm d -b conv=8,fc=5 -p fc1=10,fc2=10,fc3=4 -lmm checkpoint_quant
 python main.py -mm all -b conv=8,fc=5 -p fc1=10,fc2=10,fc3=4 -lmm checkpoint_quantized_re_alpha_0.1_20.tar
 
 python main.py -mm c -b conv=8,fc=5 -pm filter -p fc1=10,fc2=10,fc3=4 -lmm checkpoint_quantized_filter_re_alpha_0.1_19.tar
-python main.py -mm c -b conv=8,fc=5 -pm percentile -p fc1=10,fc2=10,fc3=4 -lmm checkpoint_quantized_percentile_re_alpha_0.1_19.tar
+python main.py -mm c -b conv=8,fc=5 -pm filter-gm -p fc1=10,fc2=10,fc3=4 -lmm checkpoint_quantized_alpha_0.1_188.tar

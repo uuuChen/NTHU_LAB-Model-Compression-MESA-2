@@ -99,7 +99,7 @@ def print_model_parameters(model, with_values=False):
             print(param)
 
 
-def get_model_conv_actual_pruning_rates(model, prune_rates, mode='filter'):
+def get_conv_actual_prune_rates(model, prune_rates, mode='filter'):
     """ Suppose the model prunes some filters (filters, :, :, :) or channels (:, channels, :, :). """
     conv_idx = 0
     prune_filter_nums = None
@@ -203,6 +203,10 @@ def initial_train(model, args, train_loader, val_loader, tok, use_cuda=True):
             log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
             log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
             best_prec1 = prec1
+
+        if args.prune_mode == 'filter-gm' and tok == "initial":
+            prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
+            model.prune_step(prune_rates, mode=args.prune_mode)
 
     model = save_masked_checkpoint(model, tok, True, best_prec5, epochs, args)
     return model
@@ -352,35 +356,35 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
 
 
 def conv_penalty(model, penalty, mode):
-    if not (mode == 'filter' or mode == 'channel'):
+    if not ('filter' in mode or 'channel' in mode):
         return 0.0
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            conv_shape = module.weight.shape
             conv_data = module.weight.data.cpu().numpy()
-            if mode == 'filter':
-                pruned_filter_indice = np.where(np.sum(conv_data.reshape(conv_data.shape[0], -1), axis=1) == 0)[0]
-                left_filter_indice = list(set(range(conv_data.shape[0])).difference(pruned_filter_indice))
+            if 'filter' in mode:
+                left_filter_indice = model.conv2leftIndiceDict[name]
             else:
                 left_filter_indice = list(range(conv_data.shape[0]))
             num_of_left_filters = len(left_filter_indice)
             penalty_filters = 0
             for i in range(num_of_left_filters - 1):
                 cur_filter_idx = left_filter_indice[i]
-                if mode == 'filter':
+                if 'filter' in mode:
                     next_filter_idx = left_filter_indice[i+1]
                     penalty_filters += penalty(
                         module.weight[cur_filter_idx, :, :, :],
                         module.weight[next_filter_idx, :, :, :]
                     )
-                elif mode == 'channel':  # have to ignore pruned channels, not completed yet.
-                    channel_nums = conv_shape[1]
+                elif 'channel' in mode:
+                    left_channel_indice = model.conv2leftIndiceDict[name]
                     penalty_channels = 0
-                    for j in range(channel_nums - 1):
+                    for j in range(len(left_channel_indice) - 1):
+                        cur_channel_idx = left_channel_indice[j]
+                        next_channel_idx = left_channel_indice[j+1]
                         penalty_channels += penalty(
-                            module.weight[i, j, :, :],
-                            module.weight[i, j+1, :, :]
+                            module.weight[i, cur_channel_idx, :, :],
+                            module.weight[i, next_channel_idx, :, :]
                         )
                     penalty_filters += penalty_channels
             penalty_filters = penalty_filters / (num_of_left_filters - 1)

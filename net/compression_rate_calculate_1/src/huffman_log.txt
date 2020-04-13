@@ -1149,3 +1149,189 @@ compressed rate:26.35418712900884
 conv original total: 3663420 bytes
 conv compress total: 371022 bytes
 average bits:1.2142283062404398 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_alpha_0.1_188.tar
+
+original total:9874176 bytes
+compress total:375083 bytes
+compressed rate:26.32530933153462
+conv original total: 3663420 bytes
+conv compress total: 371433 bytes
+average bits:1.2155602654844313 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_filter_re_alpha_0.1_19.tar
+
+original total:9874176 bytes
+compress total:374672 bytes
+compressed rate:26.35418712900884
+conv original total: 3663420 bytes
+conv compress total: 371022 bytes
+average bits:1.2142283062404398 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_filter_re_alpha_0.1_19.tar
+
+original total:9874176 bytes
+compress total:374672 bytes
+compressed rate:26.35418712900884
+conv original total: 3663420 bytes
+conv compress total: 371022 bytes
+average bits:1.2142283062404398 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_gm_re_alpha_0.3_19.tar
+
+original total:9874176 bytes
+compress total:376334 bytes
+compressed rate:26.237799401595392
+conv original total: 3663420 bytes
+conv compress total: 372684 bytes
+average bits:1.2196144771978947 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_gm_re_alpha_0.3_19.tar
+
+original total:9874176 bytes
+compress total:376334 bytes
+compressed rate:26.237799401595392
+conv original total: 3663420 bytes
+conv compress total: 372684 bytes
+average bits:1.2196144771978947 bits
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_gm_re_alpha_0.0_0.tar
+
+original total:9874176 bytes
+compress total:374971 bytes
+compressed rate:26.33317243200141
+conv original total: 3663420 bytes
+conv compress total: 371321 bytes
+average bits:1.2151972984885018 bits

@@ -6,4 +6,4 @@ model_default/
 __pycache__/
 */__pycache__/
 test
-net/compression_rate_calculate_1/src/net/checkpoint*
+net/compression_rate_calculate_1/src/checkpoint*
