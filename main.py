@@ -128,14 +128,12 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
+    args.method_str = util.get_method_str(args)
     train_loader, val_loader = dataSet.get_cifar100_dataSet(args)
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else 'cpu')
-    if use_cuda:
-        print("Using CUDA!")
-        torch.cuda.manual_seed(args.seed)
-    else:
-        print('Not using CUDA!!!')
+    torch.manual_seed(args.seed)
+    print("Using CUDA!") if use_cuda else print('Not using CUDA!!!')
 
     # make sure saving folders exist
     os.makedirs(f'{args.save_dir}', exist_ok=True)
@@ -148,6 +146,7 @@ def main():
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
 
     # start process
+    print(f'method: {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
     if args.fc_mask:
         model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).to(device)
     else:
@@ -212,7 +211,6 @@ def pruning_process(model):
 
 
 def quantize_process(model):
-    print("-------load " + f"{args.load_model} ----")
     print('------------------------------- accuracy before weight sharing ----------------------------------')
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{accuracy} ({accuracy5})")
@@ -224,13 +222,8 @@ def quantize_process(model):
     util.save_checkpoint({
         'state_dict': model.state_dict(),
         'best_prec1': accuracy,
-    }, True, filename=os.path.join(args.save_dir, 'checkpoint_quantized_alpha_{}_initial.tar'.format(args.alpha)))
-    util.log(f"{args.save_dir}/{args.log}", f"weight\t{args.save_dir}/{args.out_quantized_folder}")
-    util.log(f"{args.save_dir}/{args.log}", f"model\t{args.save_dir}/model_quantized.ptmodel")
-    util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy}")
-    util.log(f"{args.save_dir}/{args.log}", f"top5_accuracy after qauntize and retrain\t{accuracy5}")
-    util.layer2torch(f"{args.save_dir}/{args.out_quantized_folder}", model)
-    util.save_parameters(f"{args.save_dir}/{args.out_quantized_folder}", new_weight_list)
+    }, True, filename=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_initial.tar'))
+    util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
 
     print('------------------------------- retraining -------------------------------------------')
     util.quantized_retrain(model, args, quantized_index_list, quantized_center_list, train_loader, val_loader)
@@ -238,15 +231,9 @@ def quantize_process(model):
     util.save_checkpoint({
        'state_dict': model.state_dict(),
        'best_prec1': accuracy,
-    }, True, filename=os.path.join(args.save_dir, 'checkpoint_{}_alpha_{}.tar'.format('quantized_re',args.alpha)))
-    util.layer2torch(f"{args.save_dir}/{args.out_quantized_re_folder}" , model)
-    util.log(f"{args.save_dir}/{args.log}", f"weight:{args.save_dir}/{args.out_quantized_re_folder}")
-    util.log(f"{args.save_dir}/{args.log}", f"model:{args.save_dir}/model_quantized_bit{args.bits}_retrain{args.reepochs}.ptmodel")
-    util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{accuracy}")
-    util.log(f"{args.save_dir}/{args.log}", f"top5_acc after qauntize and retrain\t{accuracy5}")
+    }, True, filename=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}.tar'))
+    util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{accuracy} ({accuracy5})")
 
-    weight_list = util.parameters2list(model.children())
-    util.save_parameters(f"{args.save_dir}/{args.out_quantized_re_folder}", weight_list)
     return model
 
 

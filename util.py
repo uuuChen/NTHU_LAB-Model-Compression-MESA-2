@@ -482,6 +482,16 @@ def train(train_loader, model, optimizer, epoch, alpha, args, tok=""):
             # print(layer_penalty)
 
 
+def get_method_str(args):
+    method_list = list()
+    if args.model_mode != 'c':
+        method_list.append(f'alpha_{args.alpha}')
+    if args.model_mode != 'd':
+        method_list.append(f'beta_{args.beta}')
+    method_str = '_'.join(method_list)
+    return method_str
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
