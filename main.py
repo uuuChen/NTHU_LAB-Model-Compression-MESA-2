@@ -225,20 +225,14 @@ def quantize_process(model):
     old_weight_list, new_weight_list, quantized_index_list, quantized_center_list = (
         apply_weight_sharing(model, args.model_mode, args.device, args.bits))
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
-    util.save_checkpoint({
-        'state_dict': model.state_dict(),
-        'best_prec1': accuracy,
-    }, file_path=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_initial.tar'))
+    util.save_masked_checkpoint(model, "quantized", accuracy, "initial", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
 
     print('------------------------------- retraining -------------------------------------------')
     util.quantized_retrain(model, args, quantized_index_list, quantized_center_list, train_loader, val_loader)
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
-    util.save_checkpoint({
-       'state_dict': model.state_dict(),
-       'best_prec1': accuracy,
-    }, file_path=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_end.tar'))
-    util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{accuracy} ({accuracy5})")
+    util.save_masked_checkpoint(model, "quantized", accuracy, "end", args)
+    util.log(f"{args.save_dir}/{args.log}", f"accuracy after qauntize and retrain\t{accuracy} ({accuracy5})")
 
     return model
 

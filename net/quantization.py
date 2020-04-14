@@ -5,7 +5,10 @@ import scipy.linalg
 
 
 def apply_weight_sharing(model, model_mode, device, bits=4):
-    old_weight_list = new_weight_list = quantized_index_list = quantized_center_list = list()
+    old_weight_list = []
+    new_weight_list = []
+    quantized_index_list = []
+    quantized_center_list = []
     new_weight = quantized_index = quantized_center = None
     for name, module in model.named_children():
         print(name, module)
@@ -15,7 +18,7 @@ def apply_weight_sharing(model, model_mode, device, bits=4):
             continue
         elif len(shape) > 2:  # convolution layer
             if model_mode == 'd':  # skip convolution layer
-                continue  
+                continue
             weight = old_weight.reshape(1, -1)
             zero_index = np.where(weight == 0)[1]
             mat = weight[0]
@@ -75,3 +78,5 @@ def apply_weight_sharing(model, model_mode, device, bits=4):
         quantized_center_list.append(quantized_center)
 
     return old_weight_list, new_weight_list, quantized_index_list, quantized_center_list
+
+

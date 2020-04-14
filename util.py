@@ -24,7 +24,7 @@ def load_checkpoint(model, file, args):
         checkpoint = torch.load(file)
         best_prec1 = checkpoint['best_prec1']
         model.load_state_dict(checkpoint['state_dict'])
-        print(f"=> loaded checkpoint '{args.evaluate}' (epoch {checkpoint['epoch']})")
+        print(f"=> loaded checkpoint '{args.evaluate}'")
     else:
         print(f"=> no checkpoint found at '{file}'")
         raise
@@ -34,7 +34,6 @@ def load_checkpoint(model, file, args):
 def save_masked_checkpoint(model, mode, best_prec1, epoch, args):
     save_file_path = os.path.join(args.save_dir, f'checkpoint_{mode}_{args.method_str}_{epoch}.tar')
     save_checkpoint({
-        'epoch': epoch + 1,
         'state_dict': model.state_dict(),
         'best_prec1': best_prec1,
     }, file_path=save_file_path)
@@ -79,7 +78,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
     else:
         epochs = args.epochs
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    print(f'start epoch {args.start_epoch} / end epoch {epochs}\n')
+    print(f'start epoch {args.start_epoch} / end epoch {epochs}')
     for epoch in range(args.start_epoch, epochs):
         print(f'\nin epoch {epoch}')
         optimizer = adjust_learning_rate(optimizer, epoch, args)
