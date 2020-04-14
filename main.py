@@ -122,20 +122,26 @@ parser.add_argument('--out-quantized-re-folder', default='model_quantized_retrai
 args = train_loader = val_loader = None
 
 
-def main():
-    # environment setting
+def environ_setting():
     global args, train_loader, val_loader
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
     args.method_str = util.get_method_str(args)
     train_loader, val_loader = dataSet.get_cifar100_dataSet(args)
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
-    device = torch.device("cuda" if use_cuda else 'cpu')
+    args.best_prec1 = 0.0
     torch.manual_seed(args.seed)
-    print("Using CUDA!") if use_cuda else print('Not using CUDA!!!')
+    args.use_cuda = not args.no_cuda and torch.cuda.is_available()
+    if args.use_cuda:
+        print("Using CUDA!")
+        args.device = torch.device("cuda")
+        torch.backends.cudnn.benchmark = True
+    else:
+        print('Not using CUDA!')
+        args.device = torch.device("cpu")
 
-    # make sure saving folders exist
+
+def check_folders_exist():
     os.makedirs(f'{args.save_dir}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_oldweight_folder}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_pruned_folder}', exist_ok=True)
@@ -145,15 +151,16 @@ def main():
     util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
 
-    # start process
-    print(f'method: {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
+
+def run_process():
+    print(f'Method: {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
     if args.fc_mask:
-        model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).to(device)
+        model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
     else:
-        model = AlexNet_mask.AlexNet(mask_flag=True).to(device)
+        model = AlexNet_mask.AlexNet(mask_flag=True).to(args.device)
     if os.path.isfile(f"{args.load_model}"):
-        print("-------load " + f"{args.load_model} ----")
-        model = util.load_checkpoint(model, f"{args.load_model}", args)
+        model, args.best_prec1 = util.load_checkpoint(model, f"{args.load_model}", args)
+        print("-------load " + f"{args.load_model} ({args.best_prec1:.3f})----")
     if args.initial_process:
         model = initial_process(model)
     if args.pruning_process:
@@ -167,9 +174,8 @@ def initial_process(model):
     util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
     model = util.initial_train(model, args, train_loader, val_loader, 'initial')
-    accuracy, accuracy5 = util.validate(val_loader, model, args, tok=(1, 5))
-    util.log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{accuracy}")
-    util.log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{accuracy5}")
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{accuracy} ({accuracy5})")
     return model
 
 
@@ -190,7 +196,7 @@ def pruning_process(model):
         if args.prune_mode != 'filter-gm':  # filter-gm prunes model during initial_train
             prune_rates = args.prune_rates
             if 'filter' in args.prune_mode:
-                prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
+                prune_rates = model.get_conv_actual_prune_rates(args.prune_rates, print_log=True)
             model.prune_step(prune_rates, mode=args.prune_mode)
         model.set_conv_prune_indice_dict(mode=args.prune_mode)
 
@@ -217,12 +223,12 @@ def quantize_process(model):
 
     print('------------------------------- accuacy after weight sharing -------------------------------')
     old_weight_list, new_weight_list, quantized_index_list, quantized_center_list = (
-        apply_weight_sharing(model, args.model_mode, args.bits))
+        apply_weight_sharing(model, args.model_mode, args.device, args.bits))
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_checkpoint({
         'state_dict': model.state_dict(),
         'best_prec1': accuracy,
-    }, True, filename=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_initial.tar'))
+    }, file_path=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_initial.tar'))
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
 
     print('------------------------------- retraining -------------------------------------------')
@@ -231,10 +237,16 @@ def quantize_process(model):
     util.save_checkpoint({
        'state_dict': model.state_dict(),
        'best_prec1': accuracy,
-    }, True, filename=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}.tar'))
+    }, file_path=os.path.join(args.save_dir, f'checkpoint_quantized_{args.method_str}_end.tar'))
     util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{accuracy} ({accuracy5})")
 
     return model
+
+
+def main():
+    environ_setting()
+    check_folders_exist()
+    run_process()
 
 
 if __name__ == '__main__':

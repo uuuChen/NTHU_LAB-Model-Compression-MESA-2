@@ -115,11 +115,11 @@ class PruningModule(Module):
         elif dim == 1:
             module.weight.data[:, indices, :, :] = 0.0  # only happened to conv layer, so its dimension is 4
 
-    def get_conv_actual_prune_rates(self, prune_rates, mode='filter'):
+    def get_conv_actual_prune_rates(self, prune_rates, mode='filter', print_log=False):
         """ Suppose the model prunes some filters (filters, :, :, :) or channels (:, channels, :, :). """
         conv_idx = 0
         prune_filter_nums = None
-        new_pruning_rates = []
+        new_pruning_rates = list()
         for name, module in self.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
                 conv_shape = module.weight.shape
@@ -145,20 +145,21 @@ class PruningModule(Module):
                 actual_channel_prune_rate = prune_channel_nums / channel_nums
                 channel_bias = abs(actual_channel_prune_rate - target_channel_prune_rate)
 
-                print('{}'.format(name))
-
                 if mode == 'filter':
-                    print(f'original filter nums: {filter_nums:4} | prune filter nums: {prune_filter_nums:4} | target '
-                          f'filter prune rate: {target_filter_prune_rate * 100.:.2f}% | actual filter prune rate'
-                          f': {actual_filter_prune_rate * 100.:.2f}% | filter bias: {filter_bias * 100.:.2f}%\n')
+                    if print_log:
+                        print(f'{name:6} | original filter nums: {filter_nums:4} | prune filter nums: '
+                              f'{prune_filter_nums:4} | target filter prune rate: {target_filter_prune_rate * 100.:.2f}'
+                              f'% | actual filter prune rate : {actual_filter_prune_rate * 100.:.2f}% | filter bias: '
+                              f'{filter_bias * 100.:.2f}%\n')
                     new_pruning_rates.append(actual_filter_prune_rate)
 
                 elif mode == 'channel':
-                    print(
-                        f'original channel nums: {channel_nums:4} | prune channel nums: {prune_channel_nums:4} | target'
-                        f'channel prune rate: {target_channel_prune_rate * 100.:.2f}% | actual '
-                        f'channel prune rate: {actual_channel_prune_rate * 100.:.2f}% | channel bias: '
-                        f'{channel_bias * 100.:.2f}%\n')
+                    if print_log:
+                        print(f'{name:6} | original channel nums: {channel_nums:4} | prune channel nums: '
+                              f'{prune_channel_nums:4} | target channel prune rate: '
+                              f'{target_channel_prune_rate * 100.:.2f}% | actual channel prune rate: '
+                              f'{actual_channel_prune_rate * 100.:.2f}% | channel bias: {channel_bias * 100.:.2f}%\n')
+
                     new_pruning_rates.append(actual_channel_prune_rate)
 
                 conv_idx += 1
@@ -166,7 +167,7 @@ class PruningModule(Module):
         return new_pruning_rates
 
     def set_conv_prune_indice_dict(self, mode='filter-norm'):
-        pruned_indice = left_indice = None
+        pruned_indice = None
         for name, module in self.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
                 conv_arr = module.weight.data.cpu().numpy()
@@ -197,7 +198,6 @@ class _ConvNd(Module):
         self.transposed = transposed
         self.output_padding = output_padding
         self.groups = groups
-        # self.mask = Parameter(torch.ones([out_features, in_features]), requires_grad=False)
         if transposed:
             self.weight = Parameter(torch.Tensor(in_channels, out_channels // groups, *kernel_size))
             self.mask = Parameter(torch.ones(in_channels, out_channels // groups, *kernel_size), requires_grad=False)
