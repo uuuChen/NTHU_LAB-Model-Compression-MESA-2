@@ -120,10 +120,10 @@ def main():
     # split_list = args.load_model_mpd.split("_")
     # alpha_list.append(alpha)
 
-    acc_deep, org_total_deep, compressed_total_deep = deep_huffman_encode(val_loader, "checkpoint_quantized_percentile_re_alpha_0.1_19.tar", "t", True, args)
+    acc_deep, org_total_deep, compressed_total_deep = deep_huffman_encode(val_loader, "checkpoint_quantized_re_alpha_0.1_19.tar", "t", True, args)
     print(int(round((org_total_deep / compressed_total_deep))))
-    acc_mpd, org_total_mpd,  compressed_total_mpd, fc_compressed_without_edit_mpd, edit_distance_list, fc_t, fc_d, layer_compressed_dic, layer_org_dic = mpd_huffman_encode(val_loader, args.load_model_mpd, args)
-    print(int(round((org_total_mpd / compressed_total_mpd))))
+    # acc_mpd, org_total_mpd,  compressed_total_mpd, fc_compressed_without_edit_mpd, edit_distance_list, fc_t, fc_d, layer_compressed_dic, layer_org_dic = mpd_huffman_encode(val_loader, args.load_model_mpd, args)
+    # print(int(round((org_total_mpd / compressed_total_mpd))))
 
     # compressed_alpha.append(fc_compressed_total_mpd)
     # compressed_without_edit_alpha.append(fc_compressed_without_edit_mpd)

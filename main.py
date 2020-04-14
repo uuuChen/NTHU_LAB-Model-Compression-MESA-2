@@ -26,43 +26,40 @@ class StoreDictKeyPair(argparse.Action):
         setattr(namespace, self.dest, my_dict)
 
 
-parser = argparse.ArgumentParser(description='PyTorch MINST Training')
+parser = argparse.ArgumentParser(description='MESA2 Training')
 
+# ------------- train setting ----------------------------------------------------
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--seed', type=int, default=42, metavar='S',
                     help='random seed (default: 42)')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', '-ep', default=200, type=int, metavar='N',
                     help='number of total initial epochs to run (default: 200)')
-parser.add_argument('--qauntize_epochs', '-qep', default=100, type=int, metavar='N',
+parser.add_argument('--qauntize_epochs', '-qep', default=10, type=int, metavar='N',
                     help='number of quantize retrain epochs to run (default: 10)')
-parser.add_argument('--reepochs', '-reep', default=20, type=int, metavar='N',
-                    help='number of pruning retrain epochs to run (default: 20)')
+parser.add_argument('--reepochs', '-reep', default=40, type=int, metavar='N',
+                    help='number of pruning retrain epochs to run (default: 40)')
+parser.add_argument('--prune-interval', '-pi', default=1, type=int, metavar='N',
+                    help='prune interval when using prune-mode "filter-gm" (default: 1)')
 parser.add_argument('--start-epoch', '-sep', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--batch-size', '-bs', default=256, type=int,metavar='N',
                     help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning-rate','-lr', default=0.01, type=float,
+parser.add_argument('--lr', '--learning-rate','-lr', default=0.1, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
                     metavar='W', help='weight decay (default: 5e-4)')
-parser.add_argument('--print-freq', '-pf', default=1000, type=int,
-                    metavar='N', help='print frequency (default: 20)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
+parser.add_argument('--print-freq', '-pf', default=100, type=int,
+                    metavar='N', help='print frequency (default: 100)')
 parser.add_argument('--evaluate', '-e', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='use pre-trained model')
 
-# ------------- alpha ---------------------------------------------------------------
-parser.add_argument('--alpha','-al', default=0.1, type=float, metavar='M',
+# ------------- alpha and beta ----------------------------------------------------
+parser.add_argument('--alpha', '-al', default=0.1, type=float, metavar='M',
                     help='alpha(default=0.1)')
-parser.add_argument('--beta','-be', default=0.1, type=float, metavar='M',
+parser.add_argument('--beta', '-be', default=0.1, type=float, metavar='M',
                     help='beta(default=0.1)')
 
 # ---------- pruning rate for conv1, conv2, conv3, conv4, conv5 --------------------
@@ -72,7 +69,7 @@ parser.add_argument('--prune-rates', nargs='+', type=float,
                          '(default=[0.16, 0.62, 0.65, 0.63, 0.63])')
 
 # ---------- partition size for fc1, fc2, fc3 --------------------------------------
-parser.add_argument("--partition",'-p', dest="partition",
+parser.add_argument("--partition", '-p', dest="partition",
                     action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...",
                     help='partition size of fc layer (eg. fc1=8,fc2=8,fc3=10)')
 
@@ -85,27 +82,32 @@ parser.add_argument('--log', type=str, default='log.txt',
                     help='log file name')
 
 # ---------- base dir --------------------------------------------------------------
-parser.add_argument('--save-dir','-sd', type=str,default='model_default',
+parser.add_argument('--save-dir', '-sd', type=str,default='model_default',
                     help='model store path(defalut="model_default")')
 
 # ---------- load file -------------------------------------------------------------
-parser.add_argument('--load-model','-lm', type=str,default='checkpoint_default.tar',
+parser.add_argument('--load-model', '-lm', type=str,default='checkpoint_default.tar',
                     help='load exist checkpoint file')
 
-# ---------- train mode ------------------------------------------------------------
-parser.add_argument('--train-mode', '-tm', default=1, type=int, metavar='M',
-                    help='1:initial training 2:load model+CNN pruning 3:load model+quantize'+
-                          '4:initial+prune cnn+qauntize 5:initial+quantize 6:load model+pruning+quantize')
+# ---------- train process ------------------------------------------------------------
+parser.add_argument('--initial-process', '-initp', dest='initial_process', action='store_true',
+                    help='run initial process or not')
+parser.add_argument('--pruning-process', '-prunep', dest='pruning_process', action='store_true',
+                    help='run pruning process or not')
+parser.add_argument('--qunatize-process', '-quanp', dest='quantize_process', action='store_true',
+                    help='run quantize process or not')
 
 # ---------- prune mode -----------------------------------------------------
 parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, metavar='M',
                     help='filter: pruned by filter percentile: pruned by percentile channel: pruned by channel\n')
 
 # ---------- dnn or cnn or all -----------------------------------------------------
-parser.add_argument('--model-mode', '-mm', default='d', type=str, metavar='M',
+parser.add_argument('--model-mode', '-mm', default='c', type=str, metavar='M',
                     help='d:only qauntize dnn c:only qauntize cnn a:all qauntize\n')
+parser.add_argument('--fc-mask', '-fc-mask', dest='fc_mask', action='store_true',
+                    help='use fully connected layer mask or not')
 
-
+# ---------- save folders -----------------------------------------------------
 parser.add_argument('--out-oldweight-folder', default='model_before_prune', type=str,
                     help='path to model output')
 parser.add_argument('--out-pruned-folder', default='model_prune', type=str,
@@ -117,9 +119,25 @@ parser.add_argument('--out-quantized-folder', default='model_quantized', type=st
 parser.add_argument('--out-quantized-re-folder', default='model_quantized_retrain', type=str,
                     help='path to model output')
 
+args = train_loader = val_loader = None
+
 
 def main():
-    print('this is alpha {}'.format(args.alpha))
+    # environment setting
+    global args, train_loader, val_loader
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    warnings.filterwarnings('ignore')
+    args = parser.parse_args()
+    train_loader, val_loader = dataSet.get_cifar100_dataSet(args)
+    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else 'cpu')
+    if use_cuda:
+        print("Using CUDA!")
+        torch.cuda.manual_seed(args.seed)
+    else:
+        print('Not using CUDA!!!')
+
+    # make sure saving folders exist
     os.makedirs(f'{args.save_dir}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_oldweight_folder}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_pruned_folder}', exist_ok=True)
@@ -128,75 +146,20 @@ def main():
     os.makedirs(f'{args.save_dir}/{args.out_quantized_re_folder}', exist_ok=True)
     util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
-    if args.train_mode == 1:
-        # Define model
-        model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
+
+    # start process
+    if args.fc_mask:
+        model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).to(device)
+    else:
+        model = AlexNet_mask.AlexNet(mask_flag=True).to(device)
+    if os.path.isfile(f"{args.load_model}"):
+        print("-------load " + f"{args.load_model} ----")
+        model = util.load_checkpoint(model, f"{args.load_model}", args)
+    if args.initial_process:
         model = initial_process(model)
-    elif args.train_mode == 2:
-        if os.path.isfile(f"{args.load_model}"):
-            print("-------load "+f"{args.load_model} ----")
-            model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-            model = util.load_checkpoint(model,  f"{args.load_model}", args)
-            model = pruning_process(model)
-        else:
-            print("---not found "+f"{args.load_model} ----")
-    elif args.train_mode == 3:
-        if os.path.isfile(f"{args.load_model}"):
-            model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-            model = util.load_checkpoint(model,  f"{args.load_model}", args)
-            model = quantize_process(model)
-        else:
-            print("---not found "+f"{args.load_model} ----")
-    elif args.train_mode == 4:  # initial train/ prune cnn/ qauntize
-        model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-        model = initial_process(model)
+    if args.pruning_process:
         model = pruning_process(model)
-        quantize_process(model)
-    elif args.train_mode == 5:  # initial train/ qauntize
-        model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-        model = initial_process(model)
-        model = quantize_process(model)
-    elif args.train_mode == 6:  # load base model, prune and quantization
-        if os.path.isfile(f"{args.load_model}"):
-            print("-------load "+f"{args.load_model} ----")
-            model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-            model = util.load_checkpoint(model, f"{args.load_model}", args)
-            model = pruning_process(model)
-            model = quantize_process(model)
-        else:
-            print("---not found "+f"{args.load_model} ----")
-    elif args.train_mode == 7:
-        if os.path.isfile(f"{args.load_model}"):
-            print("-------load "+f"{args.load_model} ----")
-            model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-            model = util.load_checkpoint(model,  f"{args.load_model}", args)
-            model = initial_process(model)
-            model = quantize_process(model)
-        else:
-            print("---not found "+f"{args.load_model} ----")
-    elif args.train_mode == 8:
-        model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
-        model = initial_process(model)
-    elif args.train_mode == 9:
-        model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
-        if os.path.isfile(f"{args.load_model}"):
-            model = util.load_checkpoint(model, f"{args.load_model}", args)
-        else:
-            model = initial_process(model)
-        model = pruning_process(model)
-        model = quantize_process(model)
-    elif args.train_mode == 10:
-        if os.path.isfile(f"{args.load_model}"):
-            print("-------load " + f"{args.load_model} ----")
-            model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
-            model = util.load_checkpoint(model, f"{args.load_model}", args)
-            model = initial_process(model)
-        else:
-            print("---not found " + f"{args.load_model} ----")
-    elif args.train_mode == 11:  # for filter-gm
-        model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
-        model = initial_process(model)
-        model = pruning_process(model)
+    if args.quantize_process:
         model = quantize_process(model)
 
 
@@ -205,24 +168,17 @@ def initial_process(model):
     util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
     model = util.initial_train(model, args, train_loader, val_loader, 'initial')
-    accuracy = util.validate(val_loader, model, args)
-    accuracy5 = util.validate(val_loader, model, args, topk=(5,))
-
-    util.log(f"{args.save_dir}/{args.log}", f"weight\t{args.save_dir}/{args.out_oldweight_folder}")
-    util.log(f"{args.save_dir}/{args.log}", f"model\t{args.save_dir}/model_initial_end.ptmodel")
+    accuracy, accuracy5 = util.validate(val_loader, model, args, tok=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{accuracy}")
     util.log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{accuracy5}")
-
-    util.layer2torch(f"{args.save_dir}/{args.out_oldweight_folder}", model)
-    weight_list = util.parameters2list(model.children())
-    util.save_parameters(f"{args.save_dir}/{args.out_oldweight_folder}", weight_list)
     return model
 
 
 def pruning_process(model):
     print("------------------------- Before pruning --------------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
-    accuracy = util.validate(val_loader, model, args)
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"before pruning accuracy\t{accuracy} ({accuracy5})")
 
     print("------------------------- pruning CNN--------------------------------------")
     if args.prune_mode == 'percentile':
@@ -241,70 +197,53 @@ def pruning_process(model):
 
     print("------------------------------- After prune CNN ----------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
-    prec1 = util.validate(val_loader, model, args)
-
-    util.log(f"{args.save_dir}/{args.log}", f"weight\t{args.save_dir}/{args.out_pruned_folder}")
-    util.log(f"{args.save_dir}/{args.log}", f"prune acc\t{prec1}")
-
-    util.layer2torch(f"{args.save_dir}/{args.out_pruned_folder}", model)
-    weight_list = util.parameters2list(model.children())
-    util.save_parameters(f"{args.save_dir}/{args.out_pruned_folder}", weight_list)
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"after pruning accuracy\t{accuracy} ({accuracy5})")
 
     print("------------------------- start retrain after prune CNN----------------------------")
-    util.initial_train(model, args, train_loader, val_loader, 'prune_re')
+    util.initial_train(model, args, train_loader, val_loader, 'prune_retrain')
 
     print("------------------------- After Retraining -----------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
-    accuracy = util.validate(val_loader, model, args)
-
-    util.log(f"{args.save_dir}/{args.log}", f"weight\t{args.save_dir}/{args.out_pruned_re_folder}")
-    util.log(f"{args.save_dir}/{args.log}", f"prune and retrain acc\t{accuracy}")
-
-    util.layer2torch(f"{args.save_dir}/{args.out_pruned_re_folder}" , model)
-    weight_list = util.parameters2list(model.children())
-    util.save_parameters(f"{args.save_dir}/{args.out_pruned_re_folder}", weight_list)
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"after pruning and retrain accuracy\t{accuracy} ({accuracy5})")
 
     return model
 
 
 def quantize_process(model):
-    print("-------load "+f"{args.load_model} ----")
-    ep = int(args.load_model.split("_")[-1].split(".")[0])
-
+    print("-------load " + f"{args.load_model} ----")
     print('------------------------------- accuracy before weight sharing ----------------------------------')
-    acc = util.validate(val_loader, model, args)
-    acc5 = util.validate(val_loader, model, args, topk=(5,))
-    util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{acc}")
-    util.log(f"{args.save_dir}/{args.log}", f"top5_accuracy before qauntize and retrain\t{acc5}")
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{accuracy} ({accuracy5})")
 
     print('------------------------------- accuacy after weight sharing -------------------------------')
-    old_weight_list, new_weight_list, quantized_index_list, quantized_center_list = apply_weight_sharing(model, args.model_mode, args.bits)
-    acc = util.validate(val_loader, model, args)
-    acc5 = util.validate(val_loader, model, args, topk=(5,))
+    old_weight_list, new_weight_list, quantized_index_list, quantized_center_list = (
+        apply_weight_sharing(model, args.model_mode, args.bits))
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_checkpoint({
         'state_dict': model.state_dict(),
-        'best_prec1': acc,
-    }, True, filename=os.path.join(args.save_dir, 'checkpoint_{}_alpha_{}_{}.tar'.format('quantized',args.alpha,ep)))
+        'best_prec1': accuracy,
+    }, True, filename=os.path.join(args.save_dir, 'checkpoint_quantized_alpha_{}_initial.tar'.format(args.alpha)))
     util.log(f"{args.save_dir}/{args.log}", f"weight\t{args.save_dir}/{args.out_quantized_folder}")
     util.log(f"{args.save_dir}/{args.log}", f"model\t{args.save_dir}/model_quantized.ptmodel")
-    util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{acc}")
-    util.log(f"{args.save_dir}/{args.log}", f"top5_accuracy after qauntize and retrain\t{acc5}")
+    util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy}")
+    util.log(f"{args.save_dir}/{args.log}", f"top5_accuracy after qauntize and retrain\t{accuracy5}")
     util.layer2torch(f"{args.save_dir}/{args.out_quantized_folder}", model)
     util.save_parameters(f"{args.save_dir}/{args.out_quantized_folder}", new_weight_list)
 
     print('------------------------------- retraining -------------------------------------------')
     util.quantized_retrain(model, args, quantized_index_list, quantized_center_list, train_loader, val_loader)
-    acc = util.validate(val_loader, model, args)
-    acc5 = util.validate(val_loader, model, args, topk=(5,))
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_checkpoint({
        'state_dict': model.state_dict(),
-       'best_prec1': acc,
+       'best_prec1': accuracy,
     }, True, filename=os.path.join(args.save_dir, 'checkpoint_{}_alpha_{}.tar'.format('quantized_re',args.alpha)))
     util.layer2torch(f"{args.save_dir}/{args.out_quantized_re_folder}" , model)
     util.log(f"{args.save_dir}/{args.log}", f"weight:{args.save_dir}/{args.out_quantized_re_folder}")
     util.log(f"{args.save_dir}/{args.log}", f"model:{args.save_dir}/model_quantized_bit{args.bits}_retrain{args.reepochs}.ptmodel")
-    util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{acc}")
-    util.log(f"{args.save_dir}/{args.log}", f"top5_acc after qauntize and retrain\t{acc5}")
+    util.log(f"{args.save_dir}/{args.log}", f"acc after qauntize and retrain\t{accuracy}")
+    util.log(f"{args.save_dir}/{args.log}", f"top5_acc after qauntize and retrain\t{accuracy5}")
 
     weight_list = util.parameters2list(model.children())
     util.save_parameters(f"{args.save_dir}/{args.out_quantized_re_folder}", weight_list)
@@ -312,21 +251,4 @@ def quantize_process(model):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    warnings.filterwarnings('ignore')
-    global args, best_prec1, train_loader, val_loader
-
-    # get arguments
-    args = parser.parse_args()
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
-    device = torch.device("cuda" if use_cuda else 'cpu')
-    if use_cuda:
-        print("Using CUDA!")
-        torch.cuda.manual_seed(args.seed)
-    else:
-        print('Not using CUDA!!!')
-
-    # get dataSet
-    train_loader, val_loader = dataSet.get_cifar100_dataSet(args)
-
     main()

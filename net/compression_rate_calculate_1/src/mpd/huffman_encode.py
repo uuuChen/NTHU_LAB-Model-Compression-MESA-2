@@ -57,14 +57,6 @@ def cycledistance(a,b,maxdis):
         return 0
 
 
-# def matrix_cycledistance(array_a,array_b,size_x,size_y,maxdistance):
-#     distancearray=numpy.zeros(shape=(size_x,size_y))
-#     for i in range(size_x):
-#         for j in range(size_y):
-#             distancearray[i][j]=cycledistance(array_a[i][j],array_b[i][j],maxdistance)
-#     return distancearray
-
-
 def matrix_cycledistance(array_a, array_b, maxdistance):
     flat_list_a = list(array_a.reshape(-1))
     flat_list_b = list(array_b.reshape(-1))
@@ -78,7 +70,9 @@ def matrix_cycledistance(array_a, array_b, maxdistance):
 def conv_editgraph_and_firstfilter(conv, maxdistance):
     pruned_filter_indice = numpy.where(numpy.sum(conv.reshape(conv.shape[0], -1), axis=1) == 0)[0]
     left_filter_indice = numpy.array(list(set(range(conv.shape[0])).difference(pruned_filter_indice)))
+    print(len(left_filter_indice))
     left_filters = conv[left_filter_indice, :, :, :]
+    # print(left_filters.shape)
     first_filter = None
     prev_filter = None
     edit_histogram = []
@@ -102,7 +96,7 @@ def getblocks(fc,x_axis, y_axis, partitionsize, maxdistance):
         if i==0:
             block_histogram = array(blocks)
         else:
-            block_histogram = numpy.concatenate((block_histogram,array(blocks)), axis=0)
+            block_histogram = numpy.concatenate((block_histogram, array(blocks)), axis=0)
     return block_histogram
 
 
@@ -172,7 +166,8 @@ def mpd_huffman_encode(val_loader ,model_path ,args):
         model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
     else:
         model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-    model = util.load_checkpoint(model,  f"{model_path}",args)
+    model = util.load_checkpoint(model,  f"{model_path}", args)
+    util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     ori_model_bytes = get_ori_model_bytes(model, args)
 
     util.log(f"{args.log_detail}", f"\n\n-----------------------------------------")

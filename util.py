@@ -99,55 +99,6 @@ def print_model_parameters(model, with_values=False):
             print(param)
 
 
-def get_conv_actual_prune_rates(model, prune_rates, mode='filter'):
-    """ Suppose the model prunes some filters (filters, :, :, :) or channels (:, channels, :, :). """
-    conv_idx = 0
-    prune_filter_nums = None
-    new_pruning_rates = []
-    for name, module in model.named_modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            conv_shape = module.weight.shape
-            filter_nums = conv_shape[0]
-            channel_nums = conv_shape[1]
-
-            target_filter_prune_rate = target_channel_prune_rate = prune_rates[conv_idx]
-
-            # If the filter of the previous layer is prune, the channel corresponding to this layer must also be prune
-            # Conv Shape: (fn, cn, kh, kw)
-            # (1 - prune_rate) = ((fn * (1 - new_prune_rate)) * (cn - Prune_filter_nums) * kh * kw) / (fn * cn * kh *
-            # kw)
-            if conv_idx != 0:
-                target_filter_prune_rate = (
-                    1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
-                )
-            prune_filter_nums = round(filter_nums * target_filter_prune_rate)
-            actual_filter_prune_rate = prune_filter_nums / filter_nums
-            filter_bias = abs(actual_filter_prune_rate - target_filter_prune_rate)
-
-            prune_channel_nums = round(channel_nums * target_channel_prune_rate)
-            actual_channel_prune_rate = prune_channel_nums / channel_nums
-            channel_bias = abs(actual_channel_prune_rate - target_channel_prune_rate)
-
-            print('{}'.format(name))
-
-            if mode == 'filter':
-                print(f'original filter nums: {filter_nums:4} | prune filter nums: {prune_filter_nums:4} | target '
-                      f'filter prune rate: {target_filter_prune_rate * 100.:.2f}% | actual filter prune rate'
-                      f': {actual_filter_prune_rate * 100.:.2f}% | filter bias: {filter_bias * 100.:.2f}%\n')
-                new_pruning_rates.append(actual_filter_prune_rate)
-
-            elif mode == 'channel':
-                print(f'original channel nums: {channel_nums:4} | prune channel nums: {prune_channel_nums:4} | target'
-                      f'channel prune rate: {target_channel_prune_rate * 100.:.2f}% | actual '
-                      f'channel prune rate: {actual_channel_prune_rate * 100.:.2f}% | channel bias: '
-                      f'{channel_bias * 100.:.2f}%\n')
-                new_pruning_rates.append(actual_channel_prune_rate)
-
-            conv_idx += 1
-
-    return new_pruning_rates
-
-
 def print_nonzeros(model, log_file):
     nonzero = total = 0
     for name, p in model.named_parameters():
@@ -174,7 +125,7 @@ def initial_train(model, args, train_loader, val_loader, tok, use_cuda=True):
     best_prec1 = 0
     best_prec5 = 0
     cudnn.benchmark = True
-    if tok == 'prune_re': 
+    if tok == 'prune_retrain':
         epochs = args.reepochs
         args.lr = 0.0001
     else:
@@ -184,7 +135,7 @@ def initial_train(model, args, train_loader, val_loader, tok, use_cuda=True):
     optimizer.load_state_dict(initial_optimizer_state_dict)  # Reset the optimizer
 
     print('start epoch', args.start_epoch)
-    print('epoch',epochs)
+    print('epoch', epochs)
     for epoch in range(args.start_epoch, epochs):
         optimizer = adjust_learning_rate(optimizer, epoch, args)
         print('in_epoch', epoch)
@@ -193,11 +144,10 @@ def initial_train(model, args, train_loader, val_loader, tok, use_cuda=True):
         train(train_loader, model, optimizer, epoch, args.alpha, args, tok)
 
         # evaluate on validation set
-        prec1 = validate(val_loader, model, args, tok=tok)
-        prec5 = validate(val_loader, model, args, topk=(5,), tok=tok)
+        prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
 
         # remember best prec1 and save checkpoint
-        if best_prec1 < prec1:
+        if best_prec1 < prec1 or tok == "prune_retrain":
             model = save_masked_checkpoint(model, tok, True, best_prec1, epoch, args)
             log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
             log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
@@ -205,8 +155,9 @@ def initial_train(model, args, train_loader, val_loader, tok, use_cuda=True):
             best_prec1 = prec1
 
         if args.prune_mode == 'filter-gm' and tok == "initial":
-            prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
-            model.prune_step(prune_rates, mode=args.prune_mode)
+            if epoch % args.prune_interval == 0 or epoch == epoch-1:  # 1 is hyper parameter
+                prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
+                model.prune_step(prune_rates, mode=args.prune_mode)
 
     model = save_masked_checkpoint(model, tok, True, best_prec5, epochs, args)
     return model
@@ -286,8 +237,8 @@ def quantized_retrain(model, args, quantized_index_list, quantized_center_list, 
                           data_time=data_time, loss=losses, top1=top1))
 
         # evaluate on validation set
-        prec1 = validate(val_loader, model, args)
-        prec5 = validate(val_loader, model, args, topk=(5,))
+        prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
+        # prec5 = validate(val_loader, model, args, topk=(5,))
         model = save_masked_checkpoint(model, 'quantized_re', True, prec5, epoch, args)
         log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
@@ -311,17 +262,17 @@ def test(model, test_loader, use_cuda=True):
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             correct += pred.eq(target.data.view_as(pred)).sum().item()
         accuracy = 100. * correct / len(test_loader.dataset)
-        print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)')
+        print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} '
+              f'({accuracy:.2f}%)')
     return accuracy
 
 
 def validate(val_loader, model, args, topk=(1,), tok=''):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
+    topk_list = [AverageMeter() for _ in range(len(topk))]
     criterion = nn.CrossEntropyLoss().cuda()
     penalty = nn.MSELoss(reduction='sum').cuda()
-    # switch to evaluate mode
     model.eval()
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
@@ -332,27 +283,33 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
         # compute output
         output = model(input_var)
         loss = criterion(output, target_var)
-        if tok == "prune_re":
+        if tok == "prune_retrain":
             layer_penalty = get_layer_penalty(model, penalty, args)
             loss += layer_penalty
         output = output.float()
         loss = loss.float()
 
         # measure accuracy and record loss
-        prec1 = accuracy(output.data, target, topk=topk)[0]
+        preck = accuracy(output.data, target, topk=topk)
         losses.update(loss.item(), input.size(0))
-        top1.update(prec1, input.size(0))
+        prec_str = str()
+        for j in range(len(topk)):
+            topk_list[j].update(preck[j], input.size(0))
+            prec_str += f'Prec {topk[j]} [{topk_list[j].val:.3f}) ({topk_list[j].avg:.3f})]\t'
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
         if i % args.print_freq == 0:
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Prec {top1.val:.3f} ({top1.avg:.3f})'.format(i, len(val_loader), batch_time=batch_time, loss=losses,
-                                                                top1=top1))
-    print(' * Prec {top1.avg:.3f}'.format(top1=top1))
-    return top1.avg
+            print(f'\nTest: [{i}/{len(val_loader)}]\t'
+                  f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
+                  f'{prec_str}')
+
+    topk_prec_avg = [topk.avg for topk in topk_list]
+    prec_str = "  ".join([f'Prec {topk[i]} ({topk_prec_avg[i]:.3f})' for i in range(len(topk))])
+    print(f' * {prec_str}\n')
+    return topk_prec_avg
 
 
 def conv_penalty(model, penalty, mode):
@@ -369,8 +326,8 @@ def conv_penalty(model, penalty, mode):
             num_of_left_filters = len(left_filter_indice)
             penalty_filters = 0
             for i in range(num_of_left_filters - 1):
-                cur_filter_idx = left_filter_indice[i]
                 if 'filter' in mode:
+                    cur_filter_idx = left_filter_indice[i]
                     next_filter_idx = left_filter_indice[i+1]
                     penalty_filters += penalty(
                         module.weight[cur_filter_idx, :, :, :],
@@ -387,7 +344,7 @@ def conv_penalty(model, penalty, mode):
                             module.weight[i, next_channel_idx, :, :]
                         )
                     penalty_filters += penalty_channels
-            penalty_filters = penalty_filters / (num_of_left_filters - 1)
+            penalty_filters /= (num_of_left_filters - 1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.cuda()
@@ -478,7 +435,7 @@ def train(train_loader, model, optimizer, epoch, alpha, args, tok=""):
         # compute output and loss
         output = model(input_var)
         loss = criterion(output, target_var)
-        if tok == "prune_re":
+        if tok == "prune_retrain":
             layer_penalty = get_layer_penalty(model, penalty, args)
             loss += layer_penalty
 
@@ -486,7 +443,7 @@ def train(train_loader, model, optimizer, epoch, alpha, args, tok=""):
         optimizer.zero_grad()
         loss.backward()
 
-        if tok == "prune_re":
+        if tok == "prune_retrain":
             for name, p in model.named_parameters():
                 if args.model_mode == 'd' and 'conv' in name:
                     continue

@@ -2502,3 +2502,591 @@ conv5.weight
 original:3662776 bytes	 after:370484 bytes
 	indice original:866304 bytes	 indice after:77483 bytes
 original:3663420 bytes	 after:371321 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_initial.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_norm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:291 bytes
+	edit original:76956 bytes	 edit filter after:12615 bytes
+original:78408 bytes	 after:12906 bytes
+	indice original:76956 bytes	 indice after:12615 bytes
+original:78448 bytes	 after:12956 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:1005 bytes
+	edit original:460800 bytes	 edit filter after:72377 bytes
+original:545648 bytes	 after:86338 bytes
+	indice original:460800 bytes	 indice after:72377 bytes
+original:546124 bytes	 after:86949 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:725 bytes
+	edit original:919296 bytes	 edit filter after:86548 bytes
+original:1472332 bytes	 after:174222 bytes
+	indice original:919296 bytes	 indice after:86548 bytes
+original:1473332 bytes	 after:175537 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1268 bytes
+	edit original:1299456 bytes	 edit filter after:115814 bytes
+original:2786612 bytes	 after:292619 bytes
+	indice original:1299456 bytes	 indice after:115814 bytes
+original:2787256 bytes	 after:293456 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:875 bytes
+	edit original:866304 bytes	 edit filter after:77516 bytes
+original:3662776 bytes	 after:371847 bytes
+	indice original:866304 bytes	 indice after:77516 bytes
+original:3663420 bytes	 after:372684 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_norm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:291 bytes
+	edit original:76956 bytes	 edit filter after:12615 bytes
+original:78408 bytes	 after:12906 bytes
+	indice original:76956 bytes	 indice after:12615 bytes
+original:78448 bytes	 after:12956 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:1005 bytes
+	edit original:460800 bytes	 edit filter after:72377 bytes
+original:545648 bytes	 after:86338 bytes
+	indice original:460800 bytes	 indice after:72377 bytes
+original:546124 bytes	 after:86949 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:725 bytes
+	edit original:919296 bytes	 edit filter after:86548 bytes
+original:1472332 bytes	 after:174222 bytes
+	indice original:919296 bytes	 indice after:86548 bytes
+original:1473332 bytes	 after:175537 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1268 bytes
+	edit original:1299456 bytes	 edit filter after:115814 bytes
+original:2786612 bytes	 after:292619 bytes
+	indice original:1299456 bytes	 indice after:115814 bytes
+original:2787256 bytes	 after:293456 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:875 bytes
+	edit original:866304 bytes	 edit filter after:77516 bytes
+original:3662776 bytes	 after:371847 bytes
+	indice original:866304 bytes	 indice after:77516 bytes
+original:3663420 bytes	 after:372684 bytes
+
+
+--------------------------------
+checkpoint_quantized_percentile_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:1935 bytes
+	edit original:91476 bytes	 edit filter after:110619 bytes
+original:92928 bytes	 after:112554 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_norm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:291 bytes
+	edit original:76956 bytes	 edit filter after:12615 bytes
+original:78408 bytes	 after:12906 bytes
+	indice original:76956 bytes	 indice after:12615 bytes
+original:78448 bytes	 after:12956 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:1005 bytes
+	edit original:460800 bytes	 edit filter after:72377 bytes
+original:545648 bytes	 after:86338 bytes
+	indice original:460800 bytes	 indice after:72377 bytes
+original:546124 bytes	 after:86949 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:725 bytes
+	edit original:919296 bytes	 edit filter after:86548 bytes
+original:1472332 bytes	 after:174222 bytes
+	indice original:919296 bytes	 indice after:86548 bytes
+original:1473332 bytes	 after:175537 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1268 bytes
+	edit original:1299456 bytes	 edit filter after:115814 bytes
+original:2786612 bytes	 after:292619 bytes
+	indice original:1299456 bytes	 indice after:115814 bytes
+original:2787256 bytes	 after:293456 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:875 bytes
+	edit original:866304 bytes	 edit filter after:77516 bytes
+original:3662776 bytes	 after:371847 bytes
+	indice original:866304 bytes	 indice after:77516 bytes
+original:3663420 bytes	 after:372684 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_norm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:291 bytes
+	edit original:76956 bytes	 edit filter after:12615 bytes
+original:78408 bytes	 after:12906 bytes
+	indice original:76956 bytes	 indice after:12615 bytes
+original:78448 bytes	 after:12956 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:1005 bytes
+	edit original:460800 bytes	 edit filter after:72377 bytes
+original:545648 bytes	 after:86338 bytes
+	indice original:460800 bytes	 indice after:72377 bytes
+original:546124 bytes	 after:86949 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:725 bytes
+	edit original:919296 bytes	 edit filter after:86548 bytes
+original:1472332 bytes	 after:174222 bytes
+	indice original:919296 bytes	 indice after:86548 bytes
+original:1473332 bytes	 after:175537 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1268 bytes
+	edit original:1299456 bytes	 edit filter after:115814 bytes
+original:2786612 bytes	 after:292619 bytes
+	indice original:1299456 bytes	 indice after:115814 bytes
+original:2787256 bytes	 after:293456 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:875 bytes
+	edit original:866304 bytes	 edit filter after:77516 bytes
+original:3662776 bytes	 after:371847 bytes
+	indice original:866304 bytes	 indice after:77516 bytes
+original:3663420 bytes	 after:372684 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_filter_norm_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:291 bytes
+	edit original:76956 bytes	 edit filter after:12615 bytes
+original:78408 bytes	 after:12906 bytes
+	indice original:76956 bytes	 indice after:12615 bytes
+original:78448 bytes	 after:12956 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:1005 bytes
+	edit original:460800 bytes	 edit filter after:72377 bytes
+original:545648 bytes	 after:86338 bytes
+	indice original:460800 bytes	 indice after:72377 bytes
+original:546124 bytes	 after:86949 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:725 bytes
+	edit original:919296 bytes	 edit filter after:86548 bytes
+original:1472332 bytes	 after:174222 bytes
+	indice original:919296 bytes	 indice after:86548 bytes
+original:1473332 bytes	 after:175537 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1268 bytes
+	edit original:1299456 bytes	 edit filter after:115814 bytes
+original:2786612 bytes	 after:292619 bytes
+	indice original:1299456 bytes	 indice after:115814 bytes
+original:2787256 bytes	 after:293456 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:875 bytes
+	edit original:866304 bytes	 edit filter after:77516 bytes
+original:3662776 bytes	 after:371847 bytes
+	indice original:866304 bytes	 indice after:77516 bytes
+original:3663420 bytes	 after:372684 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_initial.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:12683 bytes
+original:78408 bytes	 after:12958 bytes
+	indice original:76956 bytes	 indice after:12683 bytes
+original:78448 bytes	 after:13008 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:979 bytes
+	edit original:544000 bytes	 edit filter after:84754 bytes
+original:628848 bytes	 after:98741 bytes
+	indice original:544000 bytes	 indice after:84754 bytes
+original:629272 bytes	 after:99284 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:789 bytes
+	edit original:2066688 bytes	 edit filter after:217656 bytes
+original:2702872 bytes	 after:317729 bytes
+	indice original:2066688 bytes	 indice after:217656 bytes
+original:2703208 bytes	 after:318156 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2047 bytes
+	edit original:1658880 bytes	 edit filter after:256929 bytes
+original:4375912 bytes	 after:577132 bytes
+	indice original:1658880 bytes	 indice after:256929 bytes
+original:4376452 bytes	 after:577828 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1021 bytes
+	edit original:1833984 bytes	 edit filter after:194259 bytes
+original:6219652 bytes	 after:773108 bytes
+	indice original:1833984 bytes	 indice after:194259 bytes
+original:6219876 bytes	 after:773389 bytes
+
+
+-----------------------------------------
+checkpoint_quantized_gm_re_alpha_0.1_initial.tar
+
+
+-----------------------------------------
+checkpoint_quantized_re_alpha_0.1_19.tar
+conv1.weight
+	first original:1452 bytes	 fist filter after:247 bytes
+	edit original:76956 bytes	 edit filter after:12584 bytes
+original:78408 bytes	 after:12831 bytes
+	indice original:76956 bytes	 indice after:12584 bytes
+original:78448 bytes	 after:12881 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:991 bytes
+	edit original:460800 bytes	 edit filter after:71605 bytes
+original:545648 bytes	 after:85477 bytes
+	indice original:460800 bytes	 indice after:71605 bytes
+original:546124 bytes	 after:86088 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:728 bytes
+	edit original:919296 bytes	 edit filter after:85711 bytes
+original:1472332 bytes	 after:172527 bytes
+	indice original:919296 bytes	 indice after:85711 bytes
+original:1473332 bytes	 after:173842 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:1279 bytes
+	edit original:1299456 bytes	 edit filter after:115795 bytes
+original:2786612 bytes	 after:290916 bytes
+	indice original:1299456 bytes	 indice after:115795 bytes
+original:2787256 bytes	 after:291753 bytes
+
+
+--------------------------------
+checkpoint_quantized_re_alpha_0.1_19.tar	 sprase mode:t
+conv1.weight
+original:92928 bytes	 after:12741 bytes
+conv2.weight
+original:1228800 bytes	 after:97166 bytes
+conv3.weight
+original:2654208 bytes	 after:207755 bytes
+conv4.weight
+original:3538944 bytes	 after:292243 bytes
+conv5.weight
+original:2359296 bytes	 after:179256 bytes
+
+
+--------------------------------
+checkpoint_quantized_re_alpha_0.1_19.tar	 sprase mode:f
+conv1.weight
+original:92928 bytes	 after:11293 bytes
+conv2.weight
+original:1228800 bytes	 after:97455 bytes
+conv3.weight
+original:2654208 bytes	 after:210119 bytes
+conv4.weight
+original:3538944 bytes	 after:292665 bytes
+conv5.weight
+original:2359296 bytes	 after:189065 bytes

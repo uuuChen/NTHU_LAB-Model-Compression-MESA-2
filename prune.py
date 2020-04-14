@@ -77,9 +77,7 @@ class PruningModule(Module):
                     dim = 1
                     prune_indices = self._get_prune_indice(module.weight.data, prune_rates[conv_idx], mode=mode)
                     self._prune_by_indice(module, dim, prune_indices)
-                print(prune_indices)
                 conv_idx += 1
-
             elif isinstance(module, torch.nn.BatchNorm2d):
                 if 'filter' in mode and dim == 1:
                     self._prune_by_indice(module, 0, prune_indices)
@@ -99,21 +97,23 @@ class PruningModule(Module):
             object_nums = conv_tensor.shape[1]
         elif mode == 'filter-gm':
             filters_flat_arr = conv_arr.reshape(conv_arr.shape[0], -1)
-            sum_of_objects = np.array([np.sum(np.power(filters_flat_arr - arr, 2)) for arr in filters_flat_arr])
+            sum_of_objects = np.array([np.sum(np.power(filters_flat_arr-arr, 2)) for arr in filters_flat_arr])
             object_nums = conv_arr.shape[0]
-        object_indices = np.argsort(sum_of_objects)
+        object_indice = np.argsort(sum_of_objects)
         pruned_object_nums = round(object_nums * prune_rate)
-        return object_indices[:pruned_object_nums]
+        pruned_indice = np.sort(object_indice[:pruned_object_nums])
+        # print(list(zip(pruned_indice, sum_of_objects[object_indice])))
+        return pruned_indice
 
     def _prune_by_indice(self, module, dim, indices):
         if dim == 0:
-            if len(module.weight.size()) == 4:  # conv layer
+            if len(module.weight.size()) == 4:  # conv layer etc.
                 module.weight.data[indices, :, :, :] = 0.0
-            elif len(module.weight.size()) == 1:  # conv_bn layer
+            elif len(module.weight.size()) == 1:  # conv_bn layer etc.
                 module.weight.data[indices] = 0.0
             module.bias.data[indices] = 0.0
         elif dim == 1:
-            module.weight.data[:, indices, :, :] = 0.0  # only happened to conv layer
+            module.weight.data[:, indices, :, :] = 0.0  # only happened to conv layer, so its dimension is 4
 
     def get_conv_actual_prune_rates(self, prune_rates, mode='filter'):
         """ Suppose the model prunes some filters (filters, :, :, :) or channels (:, channels, :, :). """

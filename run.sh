@@ -21,8 +21,9 @@ python main.py -mm c -tm 8 -b 5 -be 0.1 -lr 0.1 -ep 200 -qep 20 -sd model_mesa_0
 python main.py -mm c -tm 9 -b 5 -pm filter-norm -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_filter_conv -lm model_mesa_0.1_filter_conv/checkpoint_initial_alpha_0.1_200.tar
 # train with conv geometric-median
 python main.py -mm c -tm 11 -b 5 -pm filter-gm -be 0.1 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_0.1_filter_gm_conv
-python main.py -mm c -tm 9 -b 5 -pm filter-gm -be 1.0 -lr 0.1 -ep 200 -reep 40 -qep 20 -sd model_mesa_1.0_filter_gm_conv -lm model_mesa_0.1_filter_gm_conv/checkpoint_initial_alpha_0.1_188.tar
+python main.py -mm c -tm 9 -b 5 -pm filter-gm -be 1.0 -lr 0.1 -sep 63 -ep 200 -reep 40 -qep 20 -sd model_mesa_1.0_filter_gm_conv
 
+python main.py -mm c -initp -prunep -quanp -b 5 -pm filter-gm -be 1.0 -lr 0.1 -reep 40 -qep 20 -sd model_mesa_1.0_filter_gm_conv
 #######################
 # fc
 #######################
