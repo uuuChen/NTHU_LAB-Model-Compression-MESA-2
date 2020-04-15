@@ -8,7 +8,7 @@ Node = namedtuple('Node', 'freq value left right')
 Node.__lt__ = lambda x, y: x.freq < y.freq
 
 
-def huffman_encode(arr,save_dir='./'):
+def huffman_encode(arr, save_dir='./'):
     """
     Encodes numpy array 'arr' and saves to save_dir
     The names of binary files are prefixed with prefix

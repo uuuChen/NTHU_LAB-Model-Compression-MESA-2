@@ -1,78 +1,61 @@
-import numpy
+import numpy as np
 from numpy import array
-from huffmancoding import huffman_encode_model
-import util
+from huffmancoding import huffman_encode
 
 
-def get_ori_model_bytes(model, args):
+def get_model_origin_bytes(model, args):
     model_params = 0
     for name, param in model.named_parameters():
         if 'mask' in name or 'bn' in name or 'bias' in name:
             continue
-        if 'conv' in name and args.model_mode is not 'd':
-            model_params += param.reshape(-1).shape[0]
-        if 'fc' in name and args.model_mode is not 'c':
-            model_params += param.reshape(-1).shape[0]
+        if 'conv' in name and args.model_mode != 'd':
+            model_params += len(param.reshape(-1))
+        if 'fc' in name and args.model_mode != 'c':
+            model_params += len(param.reshape(-1))
     model_bytes = model_params * 4
     return model_bytes
 
 
 def to_index(layer):
-    set_ = numpy.unique(layer)
-    dict_ = dict()
-    count_neg = 0
-    for i in range(len(set_)):
-        if set_[i] < 0:
-            dict_[set_[i]] = len(set_) - 1 - i
-            count_neg += 1
-        elif set_[i] == 0:
-            dict_[set_[i]] = 0
-        else:
-            dict_[set_[i]] = i - count_neg
-    return numpy.vectorize(dict_.get)(layer)
+    value_set = np.unique(layer)
+    value2idx_dict = dict(zip(value_set, range(len(value_set))))
+    return np.vectorize(value2idx_dict.get)(layer)
 
 
-def cycledistance(a, b, maxdis):
-    distance = abs(a-b)
-    if a > b:  # 4 -> 2
-        if distance < abs(maxdis-distance):
-            return (-1)*distance
-        else:
-            return abs(maxdis-distance)
-    elif a < b:  # 2 -> 4
-        if distance < abs(maxdis-distance):
-            return distance
-        else:
-            return (-1) * abs(maxdis-distance)
+def cycledistance(a, b, maxdistance):
+    if b - a >= 0:
+        return b - a
     else:
-        return 0
+        return b - a + maxdistance
 
 
-def matrix_cycledistance(array_a, array_b, maxdistance):
-    flat_list_a = list(array_a.reshape(-1))
-    flat_list_b = list(array_b.reshape(-1))
+def matrix_cycledistance(array_x, array_y, maxdistance):
+    flat_list_x = list(array_x.reshape(-1))
+    flat_list_y = list(array_y.reshape(-1))
     distancearray = list()
-    for a_val, b_val in list(zip(flat_list_a, flat_list_b)):
-        distancearray.append(cycledistance(a_val, b_val, maxdistance))
-    distancearray = numpy.array(distancearray).reshape(array_a.shape)
+    for x_val, y_val in list(zip(flat_list_x, flat_list_y)):
+        distancearray.append(cycledistance(x_val, y_val, maxdistance))
+    distancearray = np.array(distancearray).reshape(array_x.shape)
     return distancearray
 
 
-def conv_editgraph_and_firstfilter(conv, maxdistance):
-    pruned_filter_indice = numpy.where(numpy.sum(conv.reshape(conv.shape[0], -1), axis=1) == 0)[0]
-    left_filter_indice = numpy.array(list(set(range(conv.shape[0])).difference(pruned_filter_indice)))
-    print(len(left_filter_indice))
-    left_filters = conv[left_filter_indice, :, :, :]
+def delta_encoding_conv4d(conv4d_arr, maxdistance):
+    pruned_filter_indice = np.where(np.sum(conv4d_arr.reshape(conv4d_arr.shape[0], -1), axis=1) == 0)[0]
+    left_filter_indice = np.array(list(set(range(conv4d_arr.shape[0])).difference(pruned_filter_indice)))
+    conv4d_index = to_index(conv4d_arr)
+    left_filters_index = conv4d_index[left_filter_indice, :, :, :]
     first_filter = prev_filter = None
-    edit_histogram = list()
-    for cur_filter_idx, cur_filter in list(enumerate(left_filters)):
-        if cur_filter_idx == 0:
+    delta_filters = list()
+    for i, cur_filter in list(enumerate(left_filters_index)):
+        if i == 0:
             first_filter = cur_filter
         else:
-            edit_histogram.append(matrix_cycledistance(prev_filter, cur_filter, maxdistance))
+            delta_filters.append(matrix_cycledistance(prev_filter, cur_filter, maxdistance))
         prev_filter = cur_filter
-    edit_histogram = numpy.array(edit_histogram)
-    return edit_histogram, first_filter, pruned_filter_indice
+    first_filter = first_filter.astype('float32')
+    delta_filters = np.array(delta_filters).astype('float32')
+    pruned_filter_indice = pruned_filter_indice.astype('int32')
+    return first_filter, delta_filters, pruned_filter_indice
 
 
 def getblocks(fc, x_axis, y_axis, partitionsize):
@@ -85,174 +68,78 @@ def getblocks(fc, x_axis, y_axis, partitionsize):
         if i == 0:
             block_histogram = array(blocks)
         else:
-            block_histogram = numpy.concatenate((block_histogram, array(blocks)), axis=0)
+            block_histogram = np.concatenate((block_histogram, array(blocks)), axis=0)
     return block_histogram
 
 
-def editgraph_and_firstblock(fc, x_axis, y_axis, partitionsize, maxdistance):
-    edit_histogram=[]
-    for i in range(partitionsize-1):
+def delta_encoding_fc2d(fc2d_arr, partitionsize, maxdistance):
+    fc2d_index = to_index(fc2d_arr)
+    num_of_block_rows = fc2d_index.shape[0] // partitionsize
+    num_of_block_cols = fc2d_index.shape[1] // partitionsize
+    delta_blocks = list()
+    first_block = prev_block = None
+    for i in range(partitionsize):
         if i == 0:
-            edit_histogram = matrix_cycledistance(
-                fc[
-                    i*(x_axis//partitionsize): (i+1)*(x_axis//partitionsize): 1,
-                    i*(y_axis//partitionsize): (i+1)*(y_axis//partitionsize): 1
-                ],
-                fc[
-                    (i+1)*(x_axis//partitionsize): (i+2)*(x_axis//partitionsize): 1,
-                    (i+1)*(y_axis//partitionsize): (i+2)*(y_axis//partitionsize): 1
-                ],
-                maxdistance
-            )
+            first_block = fc2d_index[:num_of_block_rows, :num_of_block_cols]
+            prev_block = first_block
         else:
-            temp = matrix_cycledistance(
-                fc[
-                    i*(x_axis//partitionsize): (i+1)*(x_axis//partitionsize): 1,
-                    i*(y_axis//partitionsize): (i+1)*(y_axis//partitionsize): 1
-                ],
-                fc[
-                    (i+1)*(x_axis//partitionsize): (i+2)*(x_axis//partitionsize): 1,
-                    (i+1)*(y_axis//partitionsize): (i+2)*(y_axis//partitionsize): 1
-                ],
-                maxdistance
-            )
-            edit_histogram = numpy.concatenate((edit_histogram, temp), axis=0)
-
-    # for first block
-    first_block = list
-    for j in range(x_axis//partitionsize):
-        for k in range(y_axis//partitionsize):
-            first_block.append(fc[j][k])
-    return edit_histogram, array(first_block)
+            cur_block = fc2d_index[
+                i*num_of_block_rows: (i+1)*num_of_block_rows,
+                i*num_of_block_cols: (i+1)*num_of_block_cols
+            ]
+            delta_blocks.append(matrix_cycledistance(prev_block, cur_block, maxdistance))
+            prev_block = cur_block
+    first_block = first_block.astype('float32')
+    delta_blocks = np.array(delta_blocks).astype('float32')
+    return first_block, delta_blocks
 
 
-def mpd_huffman_encode(model, model_path, args):
-    first_total = edit_total = indice_total = 0
-    first_compressed = edit_compressed = indice_compressed = 0
-    fc_t = fc_d = 0
-    size = 0
-    fc_org_total = fc_compressed = conv_org_total = conv_compressed = fc_compressed_without_edit = 0
-    edit_distance_fc_list = []
-    layer_compressed_dic = {}
-    layer_org_dic = {}
-    # if args.model_mode == 'c':
-    #     model = AlexNet_mask.AlexNet(mask_flag=True).cuda()
-    # else:
-    #     model = AlexNet_mask.AlexNet_mask('AlexNet_mask', args.partition, mask_flag=True).cuda()
-    # model = util.load_checkpoint(model,  f"{model_path}", args)
-    util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
-    ori_model_bytes = get_ori_model_bytes(model, args)
-    util.log(f"{args.log_detail}", f"\n\n-----------------------------------------")
-    util.log(f"{args.log_detail}", f"{model_path}")
+def mesa2_huffman_encode_conv4d(conv4d_arr, maxdistance, directory):
+    first_filter_arr, delta_filters_arr, pruned_filter_indice = delta_encoding_conv4d(conv4d_arr, maxdistance)
+
+    # Encode
+    t0, d0 = huffman_encode(first_filter_arr, directory)
+    t1, d1 = huffman_encode(delta_filters_arr, directory)
+    t2, d2 = huffman_encode(pruned_filter_indice, directory)
+
+    # Print statistics
+    original = first_filter_arr.nbytes + delta_filters_arr.nbytes + pruned_filter_indice.nbytes
+    compressed = t0 + t1 + t2 + d0 + d1 + d2
+
+    return original, compressed
+
+
+def mesa2_huffman_encode_fc2d(fc2d, partitionsize, maxdistance, directory):
+    fc2d = to_index(fc2d)
+    first_block_arr, delta_blocks_arr = delta_encoding_fc2d(fc2d, partitionsize, maxdistance)
+
+    # Encode
+    t0, d0 = huffman_encode(first_block_arr, directory)
+    t1, d1 = huffman_encode(delta_blocks_arr, directory)
+
+    # Print statistics
+    original = first_block_arr.nbytes + delta_blocks_arr.nbytes
+    compressed = t0 + t1 + d0 + d1
+
+    return original, compressed
+
+
+def mesa2_huffman_encode_model(model, args, directory='encodings/'):
+    original_total = compressed_total = 0  # the unit is bytes
     for name, param in model.named_parameters():
         if 'mask' in name or 'bn' in name or 'bias' in name:
             continue
+        param_arr = param.data.cpu().numpy()
+        original = compressed = 0
         if 'conv' in name and args.model_mode is not 'd':
-            print(f'\n{name}')
-            weight = param.data.cpu().numpy()
-            conv_index = to_index(weight)
-            size += conv_index.size
-            conv_edit, conv_first_filter, pruned_filter_indice = conv_editgraph_and_firstfilter(conv_index, 2**int(args.bits['conv']))
-            print('---------first filter-----------')
-            conv_byte, conv_compressed_byte, t0, d0 = huffman_encode_model(conv_first_filter.astype(numpy.int32))
-            first_total += conv_byte
-            conv_org_total += conv_byte
-            first_compressed += conv_compressed_byte
-            conv_compressed += conv_compressed_byte
-            util.log(f"{args.log_detail}", f"{name}")
-            util.log(f"{args.log_detail}", f"\tfirst original:{conv_byte} bytes\t fist filter after:{conv_compressed_byte} bytes")
-            print('---------edit filter-----------')
-            conv_edit_bytes, conv_edit_compress, t0, d0=huffman_encode_model(conv_edit.astype(numpy.float32))
-            edit_total += conv_edit_bytes
-            conv_org_total += conv_edit_bytes
-            edit_compressed += conv_edit_compress
-            conv_compressed += conv_edit_compress
-            util.log(f"{args.log_detail}", f"\tedit original:{conv_edit_bytes} bytes\t edit filter after:{conv_edit_compress} bytes")
-            util.log(f"{args.log_detail}", f"original:{conv_org_total} bytes\t after:{conv_compressed} bytes")
-            print('---------pruned filter indice-----------')
-            conv_indice_bytes, conv_indice_compress, t0, d0 = huffman_encode_model(pruned_filter_indice.astype(numpy.float32))
-            indice_total += conv_indice_bytes
-            conv_org_total += conv_indice_bytes
-            indice_compressed += conv_indice_compress
-            conv_compressed += conv_indice_compress
-            util.log(f"{args.log_detail}",
-                     f"\tindice original:{conv_edit_bytes} bytes\t indice after:{conv_edit_compress} bytes")
-            util.log(f"{args.log_detail}", f"original:{conv_org_total} bytes\t after:{conv_compressed} bytes")
+            original, compressed = mesa2_huffman_encode_conv4d(param_arr, 2**int(args.bits['conv']), directory)
         if 'fc' in name and args.model_mode is not 'c':
-            print(name)
-            partition = int(args.partition[name[0:3]])
-            weight = param.data.cpu().numpy()
-            fc_index = to_index(weight)
-            # ----------- compress with editgraph format ------------------------------------------
-            size += fc_index.size
-            fc_edit, fc_first_block = editgraph_and_firstblock(fc_index,numpy.size(fc_index,0),numpy.size(fc_index,1),partition,2**int(args.bits['fc']))
-            print('---------first block-----------')
-            fc_bytes, fc_compressed_bytes, t0, d0=huffman_encode_model(fc_first_block.astype(numpy.int32))
-            fc_t += t0
-            fc_d += d0
-            first_total += fc_bytes
-            fc_org_total += fc_bytes
-            first_compressed += fc_compressed_bytes
-            fc_compressed += fc_compressed_bytes
-            util.log(f"{args.log_detail}", f"{name}")
-            util.log(f"{args.log_detail}", f"\tfirst original:{fc_bytes} bytes\t fist block after:{fc_compressed_bytes} bytes")
-            print('---------edit block-----------')
-            fc_edit_bytes, fc_edit_compress, t0, d0=huffman_encode_model(fc_edit.astype(numpy.float32))
-            fc_t += t0
-            fc_d += d0
-            edit_total += fc_edit_bytes
-            fc_org_total += fc_edit_bytes
-            edit_compressed += fc_edit_compress
-            fc_compressed += fc_edit_compress
-            util.log(f"{args.log_detail}", f"\tedit original:{fc_edit_bytes} bytes\t edit block after:{fc_edit_compress} bytes")
-            util.log(f"{args.log_detail}", f"original:{fc_bytes+fc_edit_bytes} bytes\t after:{fc_compressed_bytes+fc_edit_compress} bytes")
-            layer_compressed_dic[name[0:3]] = fc_compressed_bytes + fc_edit_compress
+            original, compressed = mesa2_huffman_encode_fc2d(
+                param_arr, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
+        original_total += original
+        compressed_total += compressed
+    ori_model_bytes = get_model_origin_bytes(model, args)
+    print(f'compression rate: {ori_model_bytes/compressed_total:.3f} X')
 
-            # ----------- compress without editgraph format ------------------------------------------
-            size += fc_index.size
-            blocks = getblocks(fc_index, numpy.size(fc_index, 0), numpy.size(fc_index, 1), partition)
 
-            fc_bytes, fc_compressed_bytes, t0, d0=huffman_encode_model(blocks.astype(numpy.int32))
-            fc_compressed_without_edit += fc_compressed_bytes
-            layer_org_dic[name[0:3]] = fc_bytes
 
-            # ----------- count edit distance ------------------------------------------
-            shape = weight.shape
-            edit_distance=0
-            for i in range(partition-1):
-                for j in range(shape[0]//partition):
-                    for k in range(shape[1]//partition):
-                        if(numpy.absolute(weight[i*(shape[0]//partition)+j][i*(shape[1]//partition)+k]-weight[(i+1)*(shape[0]//partition)+j][(i+1)*(shape[1]//partition)+k])!=0):
-                            edit_distance+=1
-            edit_distance_fc_list.append(edit_distance)
-
-    print('\nfirst_block bytes org:{}'.format(first_total))
-    print('first_block bytes after compression:{}'.format(first_compressed))
-    print('edit_total bytes org:{}'.format(edit_total))
-    print('edit_total bytes after compression:{}\n'.format(edit_compressed))
-
-    compressed = conv_compressed + fc_compressed
-    if args.model_mode == 'c' and ('filter' in args.prune_mode or 'channel' in args.prune_mode):
-        compressed += indice_compressed
-
-    util.log(f"{args.log}", f"\n\n------------------------------------")
-    util.log(f"{args.log}", f"{model_path}")
-
-    util.log(f"{args.log}", f"\noriginal total:{ori_model_bytes} bytes")
-    util.log(f"{args.log}", f"compress total:{compressed} bytes")
-    util.log(f"{args.log}", f"compressed rate:{(ori_model_bytes/compressed)}")
-    if args.model_mode != 'c':
-        util.log(f"{args.log}", f"fc original total: {fc_org_total} bytes")
-        util.log(f"{args.log}", f"fc compress total: {fc_compressed} bytes")
-    if args.model_mode != 'd':
-        util.log(f"{args.log}", f"conv original total: {conv_org_total} bytes")
-        util.log(f"{args.log}", f"conv compress total: {conv_compressed} bytes")
-    util.log(f"{args.log}", f"average bits:{compressed*8/(size)} bits")
-
-    print('original bytes:{}'.format(ori_model_bytes))
-    print('bytes after compression:{}'.format(compressed))
-    print('compressed rate:{}'.format(ori_model_bytes/compressed))
-    print('average bit:{}'.format(compressed*8/size))
-
-    acc = None
-    return acc, ori_model_bytes,  compressed, fc_compressed_without_edit, edit_distance_fc_list, fc_t, fc_d, layer_compressed_dic, layer_org_dic

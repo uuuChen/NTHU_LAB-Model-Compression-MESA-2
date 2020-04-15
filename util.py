@@ -154,7 +154,7 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
             loss = loss.float()
 
             # measure accuracy and record loss
-            prec1 = accuracy(output.data, target)[0]
+            prec1 = accuracy(output.data, target, topk=(1,))[0]
             losses.update(loss.item(), input.size(0))
             top1.update(prec1, input.size(0))
 
@@ -162,13 +162,11 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
             batch_time.update(time.time() - end)
             end = time.time()
             if i % args.print_freq == 0:
-                print('Epoch: [{0}][{1}/{2}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Prec {top1.val:.3f} ({top1.avg:.3f})'.format(
-                          epoch, i, len(train_loader), batch_time=batch_time,
-                          data_time=data_time, loss=losses, top1=top1))
+                print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
+                      f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      f'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                      f'Loss {losses.val:.4f} ({losses.avg:.4f})\t'
+                      f'Prec {top1.val:.3f} ({top1.avg:.3f})')
 
         # evaluate on validation set
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
@@ -177,7 +175,7 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
         log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
 
-    model = save_masked_checkpoint(model,'quantized_re', best_prec5, args.reepochs, args)
+    model = save_masked_checkpoint(model, 'quantized_re', best_prec5, args.reepochs, args)
     return model
 
 
@@ -209,7 +207,7 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
         prec_str = str()
         for j in range(len(topk)):
             topk_avg_meters[j].update(preck[j], input.size(0))
-            prec_str += f'Prec {topk[j]} [{topk_avg_meters[j].val:.3f}({topk_avg_meters[j].avg:.3f})]\t'
+            prec_str += f'Prec {topk[j]} {topk_avg_meters[j].val:.3f} ({topk_avg_meters[j].avg:.3f})\t'
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -364,7 +362,7 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
         loss = loss.float()
 
         # measure accuracy and record loss
-        prec1 = accuracy(output.data, target)[0]
+        prec1 = accuracy(output.data, target, topk=(1,))[0]
         losses.update(loss.item(), input.size(0))
         top1.update(prec1, input.size(0))
 

@@ -11,6 +11,8 @@ import util
 import dataSet
 import warnings
 from quantization import apply_weight_sharing
+# from model_encoder import mpd_huffman_encode
+from model_encoder import mesa2_huffman_encode_model, mpd_huffman_encode
 from PIL import ImageFile
 from prune import MaskedConv2d
 
@@ -76,8 +78,9 @@ parser.add_argument("--partition", '-p', dest="partition",
                     help='partition size of fc layer (eg. fc1=8,fc2=8,fc3=10)')
 
 # ---------- quantize bits ---------------------------------------------------------
-parser.add_argument('--bits', '-b', default=5, type=int,
-                    help='quantizatize bit(default=5)')
+parser.add_argument('--bits', '-b',
+                    action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...",
+                    help='partition size of fc layer (eg. conv=8,fc=5)')
 
 # ---------- log file --------------------------------------------------------------
 parser.add_argument('--log', type=str, default='log.txt',
@@ -98,6 +101,8 @@ parser.add_argument('--pruning-process', '-prunep', dest='pruning_process', acti
                     help='run pruning process or not')
 parser.add_argument('--qunatize-process', '-quanp', dest='quantize_process', action='store_true',
                     help='run quantize process or not')
+parser.add_argument('--encoding-process', '-encp', dest='encoding_process', action='store_true',
+                    help='run huffman encoding process or not')
 
 # ---------- prune mode -----------------------------------------------------
 parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, metavar='M',
@@ -106,7 +111,7 @@ parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, meta
 # ---------- dnn or cnn or all -----------------------------------------------------
 parser.add_argument('--model-mode', '-mm', default='c', type=str, metavar='M',
                     help='d:only qauntize dnn c:only qauntize cnn a:all qauntize\n')
-parser.add_argument('--use-mesa-fc-mask', '-umfc', dest='use_mesa_fc-mask', action='store_true',
+parser.add_argument('--use-mesa-fc-mask', '-umfcm', dest='use_mesa_fc_mask', action='store_true',
                     help='use fully connected layer mask or not')
 
 # ---------- save folders -----------------------------------------------------
@@ -156,10 +161,12 @@ def run_process():
     util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
     print(f'Method | {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
-    if args.use_mesa_fc_mask:
-        model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
-    else:
+    if args.model_mode == 'c':
         model = AlexNet_mask.AlexNet(mask_flag=True).to(args.device)
+    else:
+        model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
+    print(model)
+    util.print_model_parameters(model)
     if os.path.isfile(f"{args.load_model}"):
         model, args.best_prec1 = util.load_checkpoint(model, f"{args.load_model}", args)
         print("-------load " + f"{args.load_model} ({args.best_prec1:.3f})----")
@@ -169,11 +176,11 @@ def run_process():
         model = pruning_process(model)
     if args.quantize_process:
         model = quantize_process(model)
+    if args.encoding_process:
+        model = encoding_process(model)
 
 
 def initial_process(model):
-    print(model)
-    util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
     model = util.initial_train(model, args, train_loader, val_loader, 'initial')
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
@@ -237,6 +244,15 @@ def quantize_process(model):
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after qauntize and retrain\t{accuracy} ({accuracy5})")
 
     return model
+
+
+def encoding_process(model):
+    print('------------------------------- accuracy before huffman encoding ----------------------------------')
+    accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
+    util.log(f"{args.save_dir}/{args.log}", f"accuracy before huffman encoding\t{accuracy} ({accuracy5})")
+
+    print('------------------------------- encoding -------------------------------------------')
+    mesa2_huffman_encode_model(model, args)
 
 
 def main():

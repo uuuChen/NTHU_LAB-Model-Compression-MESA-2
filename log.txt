@@ -1,0 +1,779 @@
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+
+
+-----------------------------------------
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:0.08718606103998203 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:237 bytes
+	edit original:91476 bytes	 edit filter after:12589 bytes
+original:92928 bytes	 after:12826 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:237 bytes
+	edit original:91476 bytes	 edit filter after:12467 bytes
+original:92928 bytes	 after:12704 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+
+
+-----------------------------------------
+
+
+-----------------------------------------
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:91476 bytes	 edit filter after:13035 bytes
+original:92928 bytes	 after:13310 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:21232 bytes
+original:78408 bytes	 after:21507 bytes
+	indice original:76956 bytes	 indice after:21232 bytes
+original:78448 bytes	 after:21557 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:129022 bytes
+original:628848 bytes	 after:151553 bytes
+	indice original:544000 bytes	 indice after:129022 bytes
+original:629272 bytes	 after:152096 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:320097 bytes
+original:2702872 bytes	 after:472983 bytes
+	indice original:2066688 bytes	 indice after:320097 bytes
+original:2703208 bytes	 after:473410 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:398713 bytes
+original:4375912 bytes	 after:874163 bytes
+	indice original:1658880 bytes	 indice after:398713 bytes
+original:4376452 bytes	 after:874859 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:274240 bytes
+original:6219652 bytes	 after:1150122 bytes
+	indice original:1833984 bytes	 indice after:274240 bytes
+original:6219876 bytes	 after:1150403 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:1152400 bytes
+compressed rate:8.568358208955225
+conv original total: 6219876 bytes
+conv compress total: 1150403 bytes
+average bits:5.930355376185692 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:11252 bytes
+original:78408 bytes	 after:11527 bytes
+	indice original:76956 bytes	 indice after:11252 bytes
+original:78448 bytes	 after:11577 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:77568 bytes
+original:628848 bytes	 after:90119 bytes
+	indice original:544000 bytes	 indice after:77568 bytes
+original:629272 bytes	 after:90662 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:207401 bytes
+original:2702872 bytes	 after:298853 bytes
+	indice original:2066688 bytes	 indice after:207401 bytes
+original:2703208 bytes	 after:299280 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:240554 bytes
+original:4375912 bytes	 after:541874 bytes
+	indice original:1658880 bytes	 indice after:240554 bytes
+original:4376452 bytes	 after:542570 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:179714 bytes
+original:6219652 bytes	 after:723307 bytes
+	indice original:1833984 bytes	 indice after:179714 bytes
+original:6219876 bytes	 after:723588 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:725585 bytes
+compressed rate:13.608572393310226
+conv original total: 6219876 bytes
+conv compress total: 723588 bytes
+average bits:3.733926506100048 bits
+
+
+-----------------------------------------
+conv1.weight
+	first original:1452 bytes	 fist filter after:275 bytes
+	edit original:76956 bytes	 edit filter after:11252 bytes
+original:78408 bytes	 after:11527 bytes
+	indice original:76956 bytes	 indice after:11252 bytes
+original:78448 bytes	 after:11577 bytes
+conv2.weight
+	first original:6400 bytes	 fist filter after:974 bytes
+	edit original:544000 bytes	 edit filter after:77568 bytes
+original:628848 bytes	 after:90119 bytes
+	indice original:544000 bytes	 indice after:77568 bytes
+original:629272 bytes	 after:90662 bytes
+conv3.weight
+	first original:6912 bytes	 fist filter after:790 bytes
+	edit original:2066688 bytes	 edit filter after:207401 bytes
+original:2702872 bytes	 after:298853 bytes
+	indice original:2066688 bytes	 indice after:207401 bytes
+original:2703208 bytes	 after:299280 bytes
+conv4.weight
+	first original:13824 bytes	 fist filter after:2040 bytes
+	edit original:1658880 bytes	 edit filter after:240554 bytes
+original:4375912 bytes	 after:541874 bytes
+	indice original:1658880 bytes	 indice after:240554 bytes
+original:4376452 bytes	 after:542570 bytes
+conv5.weight
+	first original:9216 bytes	 fist filter after:1023 bytes
+	edit original:1833984 bytes	 edit filter after:179714 bytes
+original:6219652 bytes	 after:723307 bytes
+	indice original:1833984 bytes	 indice after:179714 bytes
+original:6219876 bytes	 after:723588 bytes
+
+
+------------------------------------
+
+original total:9874176 bytes
+compress total:725585 bytes
+compressed rate:13.608572393310226
+conv original total: 6219876 bytes
+conv compress total: 723588 bytes
+average bits:3.733926506100048 bits
+
+
+-----------------------------------------
+
+
+-----------------------------------------
+fc1.weight
+	first original:40900 bytes	 fist block after:5341 bytes
+	edit original:368100 bytes	 edit block after:13936 bytes
+original:409000 bytes	 after:19277 bytes
+fc2.weight
+	first original:669124 bytes	 fist block after:80650 bytes
+	edit original:6022116 bytes	 edit block after:272753 bytes
+original:6691240 bytes	 after:353403 bytes
+fc3.weight
+	first original:102400 bytes	 fist block after:13277 bytes
+	edit original:307200 bytes	 edit block after:11511 bytes
+original:409600 bytes	 after:24788 bytes
+
+
+------------------------------------
+
+original total:72941568 bytes
+compress total:397468 bytes
+compressed rate:183.51557358076624
+fc original total: 7509840 bytes
+fc compress total: 397468 bytes
+average bits:1.6936414091378778 bits

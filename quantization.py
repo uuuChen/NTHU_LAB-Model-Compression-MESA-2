@@ -4,7 +4,7 @@ from sklearn.cluster import KMeans
 import scipy.linalg
 
 
-def apply_weight_sharing(model, model_mode, device, bits=4):
+def apply_weight_sharing(model, model_mode, device, bits):
     old_weight_list = list()
     new_weight_list = list()
     quantized_index_list = list()
@@ -25,7 +25,7 @@ def apply_weight_sharing(model, model_mode, device, bits=4):
             mat = weight[0]
             min_ = min(mat.data)
             max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**bits)
+            space = np.linspace(min_, max_, num=2**bits['conv'])
             kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
                             algorithm="full")
             kmeans.fit(mat.reshape(-1, 1))
@@ -55,7 +55,7 @@ def apply_weight_sharing(model, model_mode, device, bits=4):
             mat = blocks.reshape(1, -1)[0]
             min_ = min(mat.data)
             max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**bits)
+            space = np.linspace(min_, max_, num=2**bits['fc'])
             kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
                             algorithm="full")
             kmeans.fit(mat.reshape(-1, 1))
