@@ -20,12 +20,13 @@ def apply_weight_sharing(model, model_mode, device, bits):
             if model_mode == 'd':  # skip convolution layer
                 print('\tpass')
                 continue
+            print(f'\tquantize to {2**int(bits["conv"])} bits')
             weight = old_weight.reshape(1, -1)
             zero_index = np.where(weight == 0)[1]
             mat = weight[0]
             min_ = min(mat.data)
             max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**bits['conv'])
+            space = np.linspace(min_, max_, num=2**int(bits['conv']))
             kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
                             algorithm="full")
             kmeans.fit(mat.reshape(-1, 1))
@@ -55,7 +56,7 @@ def apply_weight_sharing(model, model_mode, device, bits):
             mat = blocks.reshape(1, -1)[0]
             min_ = min(mat.data)
             max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**bits['fc'])
+            space = np.linspace(min_, max_, num=2**int(bits['fc']))
             kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
                             algorithm="full")
             kmeans.fit(mat.reshape(-1, 1))

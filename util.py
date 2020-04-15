@@ -140,7 +140,7 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
                 tensor = p.data.cpu().numpy()
                 grad_tensor = p.grad.data.cpu().numpy()
                 grad_center_array = list()
-                for j in range(2**args.bits):
+                for j in range(2 ** int(args.bits['fc' if 'fc' in name else 'conv'])):
                     grad_by_index = grad_tensor[quantized_index == j]
                     grad_center = np.mean(grad_by_index)
                     grad_center_array.append(grad_center)
@@ -300,9 +300,9 @@ def fc_penalty(model, device, penalty):
 
 def get_layers_penalty(model, penalty, args, tok):
     layer_penalty = 0.0
-    if args.model_mode != 'c':
+    if args.model_mode != 'c' and args.alpha != 0:
         layer_penalty += args.alpha * fc_penalty(model, args.device, penalty)
-    if args.model_mode != 'd' and tok == "prune_retrain":
+    if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
         layer_penalty += args.beta * conv_penalty(model, args.device, penalty, args.prune_mode)
     return layer_penalty
 

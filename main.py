@@ -11,8 +11,8 @@ import util
 import dataSet
 import warnings
 from quantization import apply_weight_sharing
-# from model_encoder import mpd_huffman_encode
-from model_encoder import mesa2_huffman_encode_model, mpd_huffman_encode
+from mesa2_encoder import mesa2_huffman_encode_model
+from deepc_encoder import deepc_huffman_encode_model
 from PIL import ImageFile
 from prune import MaskedConv2d
 
@@ -165,8 +165,6 @@ def run_process():
         model = AlexNet_mask.AlexNet(mask_flag=True).to(args.device)
     else:
         model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
-    print(model)
-    util.print_model_parameters(model)
     if os.path.isfile(f"{args.load_model}"):
         model, args.best_prec1 = util.load_checkpoint(model, f"{args.load_model}", args)
         print("-------load " + f"{args.load_model} ({args.best_prec1:.3f})----")
@@ -177,10 +175,12 @@ def run_process():
     if args.quantize_process:
         model = quantize_process(model)
     if args.encoding_process:
-        model = encoding_process(model)
+        encoding_process(model)
 
 
 def initial_process(model):
+    print(model)
+    util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
     model = util.initial_train(model, args, train_loader, val_loader, 'initial')
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
@@ -227,6 +227,7 @@ def pruning_process(model):
 
 def quantize_process(model):
     print('------------------------------- accuracy before weight sharing ----------------------------------')
+    util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{accuracy} ({accuracy5})")
 
@@ -248,11 +249,13 @@ def quantize_process(model):
 
 def encoding_process(model):
     print('------------------------------- accuracy before huffman encoding ----------------------------------')
+    util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before huffman encoding\t{accuracy} ({accuracy5})")
 
     print('------------------------------- encoding -------------------------------------------')
     mesa2_huffman_encode_model(model, args)
+    # deepc_huffman_encode_model(model)
 
 
 def main():
