@@ -1619,3 +1619,26 @@ compressed rate:12.739458589111402
 conv original total: 6219876 bytes
 conv compress total: 773089 bytes
 average bits:2.511880687563195 bits
+
+
+--------------------------------
+checkpoint_quantized_re_alpha_0.1_19.tar	 sprase mode:t
+fc original total: 0 bytes
+fc compress total: 0 bytes
+conv original total: 9874176 bytes
+conv compress total: 789161 bytes
+original total:9874176 bytes
+compress total:789161 bytes
+compressed rate:12.512245283281866
+average bit:2.557494620310596 bits
+
+
+------------------------------------
+checkpoint_quantized_re_beta_1.0_19.tar
+
+original total:9874176 bytes
+compress total:770429 bytes
+compressed rate:12.816464593103323
+conv original total: 6219876 bytes
+conv compress total: 768432 bytes
+average bits:2.496788390241373 bits

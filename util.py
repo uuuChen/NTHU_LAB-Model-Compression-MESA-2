@@ -85,16 +85,16 @@ def initial_train(model, args, train_loader, val_loader, tok):
         train(train_loader, model, optimizer, epoch, args, tok)  # train for one epoch
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))  # evaluate on validation set
 
-        # remember best prec1 and save checkpoint
+        # record best prec1 and save checkpoint
         if best_prec1 < prec1 or tok == "prune_retrain":
             model = save_masked_checkpoint(model, tok, best_prec1, epoch, args)
             log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
             log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1} ({prec5})")
             best_prec1 = prec1
 
-        # soft prune if prune mode is "filter-gm"
-        if args.prune_mode == 'filter-gm' and tok == "initial":
-            if epoch % args.prune_interval == 0 or epoch == epoch-1:  # 1 is hyper parameter
+        #  if prune mode is "filter-gm" and during initial_train, then soft prune
+        if args.model_mode != 'd' and args.prune_mode == 'filter-gm' and tok == "initial":
+            if epoch % args.prune_interval == 0 or epoch == epoch - 1:
                 prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
                 model.prune_step(prune_rates, mode=args.prune_mode)
 
@@ -102,7 +102,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
     return model
 
 
-def quantized_retrain(model, args, quantized_index_list, quantized_center_list, train_loader, val_loader, use_cuda=True):
+def quantized_retrain(model, args, quantized_index_list, train_loader, val_loader):
     criterion = nn.CrossEntropyLoss().to(args.device)
     best_prec5 = 0
     args.lr = 1e-4
@@ -184,7 +184,7 @@ def quantized_retrain(model, args, quantized_index_list, quantized_center_list, 
 def validate(val_loader, model, args, topk=(1,), tok=''):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    topk_list = [AverageMeter() for _ in range(len(topk))]
+    topk_avg_meters = [AverageMeter() for _ in range(len(topk))]
 
     criterion = nn.CrossEntropyLoss().to(args.device)
     penalty = nn.MSELoss(reduction='sum').to(args.device)
@@ -198,10 +198,8 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
 
         # compute output
         output = model(input_var)
-        loss = criterion(output, target_var)
-        if tok == "prune_retrain":
-            layer_penalty = get_layer_penalty(model, penalty, args)
-            loss += layer_penalty
+        layer_penalty = get_layers_penalty(model, penalty, args, tok)
+        loss = criterion(output, target_var) + layer_penalty
         output = output.float()
         loss = loss.float()
 
@@ -210,8 +208,8 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
         losses.update(loss.item(), input.size(0))
         prec_str = str()
         for j in range(len(topk)):
-            topk_list[j].update(preck[j], input.size(0))
-            prec_str += f'Prec {topk[j]} [{topk_list[j].val:.3f}({topk_list[j].avg:.3f})]\t'
+            topk_avg_meters[j].update(preck[j], input.size(0))
+            prec_str += f'Prec {topk[j]} [{topk_avg_meters[j].val:.3f}({topk_avg_meters[j].avg:.3f})]\t'
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -222,7 +220,7 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
                   f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
                   f'{prec_str}')
 
-    topk_prec_avg = [topk.avg for topk in topk_list]
+    topk_prec_avg = [avg_meter.avg for avg_meter in topk_avg_meters]
     prec_str = "  ".join([f'Prec {topk[i]} ({topk_prec_avg[i]:.3f})' for i in range(len(topk))])
     print(f' * {prec_str}\n')
     return topk_prec_avg
@@ -243,24 +241,20 @@ def conv_penalty(model, device, penalty, mode):
             penalty_filters = 0
             for i in range(num_of_left_filters - 1):
                 if 'filter' in mode:
-                    cur_filter_idx = left_filter_indice[i]
-                    next_filter_idx = left_filter_indice[i+1]
                     penalty_filters += penalty(
-                        module.weight[cur_filter_idx, :, :, :],
-                        module.weight[next_filter_idx, :, :, :]
+                        module.weight[left_filter_indice[i], :, :, :],
+                        module.weight[left_filter_indice[i+1], :, :, :]
                     )
                 elif 'channel' in mode:
                     left_channel_indice = model.conv2leftIndiceDict[name]
                     penalty_channels = 0
                     for j in range(len(left_channel_indice) - 1):
-                        cur_channel_idx = left_channel_indice[j]
-                        next_channel_idx = left_channel_indice[j+1]
                         penalty_channels += penalty(
-                            module.weight[i, cur_channel_idx, :, :],
-                            module.weight[i, next_channel_idx, :, :]
+                            module.weight[i, left_channel_indice[j], :, :],
+                            module.weight[i, left_channel_indice[j+1], :, :]
                         )
                     penalty_filters += penalty_channels
-            penalty_filters /= (num_of_left_filters - 1)
+            penalty_filters /= (num_of_left_filters-1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
@@ -306,11 +300,11 @@ def fc_penalty(model, device, penalty):
     return penalty.to(device)
 
 
-def get_layer_penalty(model, penalty, args):
+def get_layers_penalty(model, penalty, args, tok):
     layer_penalty = 0.0
     if args.model_mode != 'c':
         layer_penalty += args.alpha * fc_penalty(model, args.device, penalty)
-    if args.model_mode != 'd':
+    if args.model_mode != 'd' and tok == "prune_retrain":
         layer_penalty += args.beta * conv_penalty(model, args.device, penalty, args.prune_mode)
     return layer_penalty
 
@@ -336,7 +330,6 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
     top1 = AverageMeter()
     criterion = nn.CrossEntropyLoss().to(args.device)
     penalty = nn.MSELoss(reduction='sum').to(args.device)
-    layer_penalty = None
     model.train()
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
@@ -348,10 +341,8 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
 
         # compute output and loss
         output = model(input_var)
-        loss = criterion(output, target_var)
-        if tok == "prune_retrain":
-            layer_penalty = get_layer_penalty(model, penalty, args)
-            loss += layer_penalty
+        layer_penalty = get_layers_penalty(model, penalty, args, tok)
+        loss = criterion(output, target_var) + layer_penalty
 
         # compute gradient and update
         optimizer.zero_grad()
@@ -382,15 +373,12 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
         end = time.time()
 
         if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Prec {top1.val:.3f} ({top1.avg:.3f})'.format(
-                      epoch, i, len(train_loader), batch_time=batch_time,
-                      data_time=data_time, loss=losses, top1=top1))
-            if tok == "prune_retrain":
-                print(f'Layer penalty: {layer_penalty:.3f}')
+            print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
+                  f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  f'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
+                  f'Prec {top1.val:.3f} ({top1.avg:.3f})\t'
+                  f'Layer penalty {layer_penalty:.3f}')
 
 
 def get_method_str(args):
@@ -423,7 +411,7 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 50))
+    lr = args.lr * (0.1 ** (epoch // args.lr_drop_interval))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return optimizer

@@ -10,7 +10,7 @@ import AlexNet_mask
 import util
 import dataSet
 import warnings
-from net.quantization import apply_weight_sharing
+from quantization import apply_weight_sharing
 from PIL import ImageFile
 from prune import MaskedConv2d
 
@@ -35,8 +35,8 @@ parser.add_argument('--seed', type=int, default=42, metavar='S',
                     help='random seed (default: 42)')
 parser.add_argument('--epochs', '-ep', default=200, type=int, metavar='N',
                     help='number of total initial epochs to run (default: 200)')
-parser.add_argument('--qauntize_epochs', '-qep', default=10, type=int, metavar='N',
-                    help='number of quantize retrain epochs to run (default: 10)')
+parser.add_argument('--qauntize_epochs', '-qep', default=20, type=int, metavar='N',
+                    help='number of quantize retrain epochs to run (default: 20)')
 parser.add_argument('--reepochs', '-reep', default=40, type=int, metavar='N',
                     help='number of pruning retrain epochs to run (default: 40)')
 parser.add_argument('--prune-interval', '-pi', default=1, type=int, metavar='N',
@@ -45,8 +45,10 @@ parser.add_argument('--start-epoch', '-sep', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--batch-size', '-bs', default=256, type=int,metavar='N',
                     help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning-rate','-lr', default=0.1, type=float,
+parser.add_argument('--lr', '--learning-rate', '-lr', default=0.1, type=float,
                     metavar='LR', help='initial learning rate')
+parser.add_argument('--lr-drop-interval', '-lr-drop', default=50, type=int,
+                    metavar='LRD', help='learning rate drop interval (default: 50)')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
@@ -104,7 +106,7 @@ parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, meta
 # ---------- dnn or cnn or all -----------------------------------------------------
 parser.add_argument('--model-mode', '-mm', default='c', type=str, metavar='M',
                     help='d:only qauntize dnn c:only qauntize cnn a:all qauntize\n')
-parser.add_argument('--fc-mask', '-fc-mask', dest='fc_mask', action='store_true',
+parser.add_argument('--use-mesa-fc-mask', '-umfc', dest='use_mesa_fc-mask', action='store_true',
                     help='use fully connected layer mask or not')
 
 # ---------- save folders -----------------------------------------------------
@@ -124,7 +126,6 @@ args = train_loader = val_loader = None
 
 def environ_setting():
     global args, train_loader, val_loader
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
     args.method_str = util.get_method_str(args)
@@ -134,6 +135,7 @@ def environ_setting():
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
     if args.use_cuda:
         print("Using CUDA!")
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         args.device = torch.device("cuda")
         torch.backends.cudnn.benchmark = True
     else:
@@ -148,13 +150,13 @@ def check_folders_exist():
     os.makedirs(f'{args.save_dir}/{args.out_pruned_re_folder}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_quantized_folder}', exist_ok=True)
     os.makedirs(f'{args.save_dir}/{args.out_quantized_re_folder}', exist_ok=True)
-    util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
-    util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
 
 
 def run_process():
-    print(f'Method: {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
-    if args.fc_mask:
+    util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
+    util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
+    print(f'Method | {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
+    if args.use_mesa_fc_mask:
         model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
     else:
         model = AlexNet_mask.AlexNet(mask_flag=True).to(args.device)
@@ -229,7 +231,7 @@ def quantize_process(model):
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
 
     print('------------------------------- retraining -------------------------------------------')
-    util.quantized_retrain(model, args, quantized_index_list, quantized_center_list, train_loader, val_loader)
+    util.quantized_retrain(model, args, quantized_index_list, train_loader, val_loader)
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", accuracy, "end", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after qauntize and retrain\t{accuracy} ({accuracy5})")
