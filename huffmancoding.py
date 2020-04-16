@@ -36,7 +36,7 @@ def huffman_encode(arr, save_dir='./'):
         heappush(heap, merged)
 
     # Generate code value mapping
-    value2code = {}
+    value2code = dict()
 
     def generate_code(node, code):
         if node is None:

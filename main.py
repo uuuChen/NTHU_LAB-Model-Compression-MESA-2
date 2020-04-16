@@ -8,7 +8,7 @@ import torch.utils.data
 
 import AlexNet_mask
 import util
-import dataSet
+import data_loader
 import warnings
 from quantization import apply_weight_sharing
 from mesa2_encoder import mesa2_huffman_encode_model
@@ -134,7 +134,7 @@ def environment_setting():
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
     args.method_str = util.get_method_str(args)
-    train_loader, val_loader = dataSet.get_cifar100_dataSet(args)
+    train_loader, val_loader = data_loader.get_cifar100_dataSet(args)
     args.best_prec1 = 0.0
     torch.manual_seed(args.seed)
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
