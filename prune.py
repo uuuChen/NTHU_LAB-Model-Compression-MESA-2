@@ -150,7 +150,7 @@ class PruningModule(Module):
                         print(f'{name:6} | original filter nums: {filter_nums:4} | prune filter nums: '
                               f'{prune_filter_nums:4} | target filter prune rate: {target_filter_prune_rate * 100.:.2f}'
                               f'% | actual filter prune rate : {actual_filter_prune_rate * 100.:.2f}% | filter bias: '
-                              f'{filter_bias * 100.:.2f}%\n')
+                              f'{filter_bias * 100.:.2f}%')
                     new_pruning_rates.append(actual_filter_prune_rate)
 
                 elif mode == 'channel':

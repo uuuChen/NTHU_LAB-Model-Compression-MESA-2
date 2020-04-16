@@ -6,7 +6,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 
-import AlexNet_mask
+import models
 import util
 import data_loader
 import warnings
@@ -67,7 +67,7 @@ parser.add_argument('--beta', '-be', default=0.1, type=float, metavar='M',
                     help='beta(default=0.1)')
 
 # ---------- pruning rate for conv1, conv2, conv3, conv4, conv5 --------------------
-parser.add_argument('--prune-rates', nargs='+', type=float,
+parser.add_argument('--prune-rates', "-pr", nargs='+', type=float,
                     default=[0.16, 0.62, 0.65, 0.63, 0.63],
                     help='pruning rate for AlexNet conv layer ' +
                          '(default=[0.16, 0.62, 0.65, 0.63, 0.63])')
@@ -108,7 +108,9 @@ parser.add_argument('--encoding-process', '-encp', dest='encoding_process', acti
 parser.add_argument('--prune-mode', '-pm', default='filter-norm', type=str, metavar='M',
                     help='filter: pruned by filter percentile: pruned by percentile channel: pruned by channel\n')
 
-# ---------- dnn or cnn or all -----------------------------------------------------
+# ---------- select model -----------------------------------------------------
+parser.add_argument('--use-model', '-um', default='alex', type=str, metavar='M',
+                    help='alex: AlexNet vgg: VggNet res:ResNet\n')
 parser.add_argument('--model-mode', '-mm', default='c', type=str, metavar='M',
                     help='d:only qauntize dnn c:only qauntize cnn a:all qauntize\n')
 parser.add_argument('--use-mesa-fc-mask', '-umfcm', dest='use_mesa_fc_mask', action='store_true',
@@ -126,15 +128,16 @@ parser.add_argument('--out-quantized-folder', default='model_quantized', type=st
 parser.add_argument('--out-quantized-re-folder', default='model_quantized_retrain', type=str,
                     help='path to model output')
 
-args = train_loader = val_loader = None
+args = train_loader = val_loader = model = None
 
 
 def environment_setting():
-    global args, train_loader, val_loader
+    global args, train_loader, val_loader, model
+
+    # get arguments
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
     args.method_str = util.get_method_str(args)
-    train_loader, val_loader = data_loader.get_cifar100_dataSet(args)
     args.best_prec1 = 0.0
     torch.manual_seed(args.seed)
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -146,6 +149,17 @@ def environment_setting():
     else:
         print('Not using CUDA!')
         args.device = torch.device("cpu")
+
+    # make sure output folders exist
+    check_folders_exist()
+
+    # get data loader
+    train_loader, val_loader = data_loader.get_cifar100_dataSet(args)
+
+    # get model
+    model = models.get_model(args)
+
+    return model
 
 
 def check_folders_exist():
@@ -161,34 +175,27 @@ def run():
     util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
     print(f'Method | {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
-    if args.model_mode == 'c':
-        model = AlexNet_mask.AlexNet(mask_flag=True).to(args.device)
-    else:
-        model = AlexNet_mask.AlexNet_mask(args.partition, mask_flag=True).to(args.device)
-    if os.path.isfile(f"{args.load_model}"):
-        model, args.best_prec1 = util.load_checkpoint(model, f"{args.load_model}", args)
-        print("-------load " + f"{args.load_model} ({args.best_prec1:.3f})----")
     if args.initial_process:
-        model = initial_process(model)
+        initial_process()
     if args.pruning_process:
-        model = pruning_process(model)
+        pruning_process()
     if args.quantize_process:
-        model = quantize_process(model)
+        quantize_process()
     if args.encoding_process:
-        encoding_process(model)
+        encoding_process()
 
 
-def initial_process(model):
+def initial_process():
+    global model
     print(model)
     util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
     model = util.initial_train(model, args, train_loader, val_loader, 'initial')
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{accuracy} ({accuracy5})")
-    return model
 
 
-def pruning_process(model):
+def pruning_process():
     print("------------------------- Before pruning --------------------------------")
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
@@ -222,10 +229,8 @@ def pruning_process(model):
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"after pruning and retrain accuracy\t{accuracy} ({accuracy5})")
 
-    return model
 
-
-def quantize_process(model):
+def quantize_process():
     print('------------------------------- accuracy before weight sharing ----------------------------------')
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
@@ -244,10 +249,8 @@ def quantize_process(model):
     util.save_masked_checkpoint(model, "quantized", accuracy, "end", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after qauntize and retrain\t{accuracy} ({accuracy5})")
 
-    return model
 
-
-def encoding_process(model):
+def encoding_process():
     print('------------------------------- accuracy before huffman encoding ----------------------------------')
     util.print_nonzeros(model, f"{args.save_dir}/{args.log}")
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
@@ -260,7 +263,6 @@ def encoding_process(model):
 
 def main():
     environment_setting()
-    check_folders_exist()
     run()
 
 
