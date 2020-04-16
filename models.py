@@ -357,7 +357,7 @@ def get_model(args):
             model = AlexNet(100, mask_flag=True).to(args.device)
         elif args.use_model == 'vgg16':
             # args.prune_rates = [0.42, 0.78, 0.66, 0.64, 0.47, 0.76, 0.58, 0.68, 0.73, 0.66, 0.65, 0.71, 0.64]  # deepC
-            args.prune_rates = [0.50, 0.50, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 0.75, 0.75, 0.75, 0.75, 0.75]  # deepC
+            args.prune_rates = [0.50, 0.50, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 0.75, 0.75, 0.75, 0.75, 0.75]  # PFEC
             model = vgg16().to(args.device)
         else:
             raise

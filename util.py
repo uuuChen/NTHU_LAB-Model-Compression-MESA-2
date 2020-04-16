@@ -130,11 +130,11 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
             loss.backward()
             k = 0
             for name, p in model.named_parameters():
-                if args.model_mode == 'd' and 'conv' in name:
-                    continue
-                if args.model_mode == 'c' and 'fc' in name:
-                    continue
-                if 'mask' in name or 'bias' in name or 'bn' in name:
+                if (args.model_mode == 'd' and 'conv' in name or
+                        args.model_mode == 'c' and 'fc' in name or
+                        'mask' in name or
+                        'bias' in name or
+                        'bn' in name):
                     continue
                 quantized_index = quantized_index_list[k]
                 tensor = p.data.cpu().numpy()
@@ -196,8 +196,8 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
 
         # compute output
         output = model(input_var)
-        layer_penalty = get_layers_penalty(model, penalty, args, tok)
-        loss = criterion(output, target_var) + layer_penalty
+        all_penalty, fc_penalty_, conv_penalty_ = get_layers_penalty(model, penalty, args, tok)
+        loss = criterion(output, target_var) + all_penalty
         output = output.float()
         loss = loss.float()
 
@@ -252,7 +252,7 @@ def conv_penalty(model, device, penalty, mode):
                             module.weight[i, left_channel_indice[j+1], :, :]
                         )
                     penalty_filters += penalty_channels
-            penalty_filters /= (num_of_left_filters-1)
+            penalty_filters /= (num_of_left_filters - 1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
@@ -299,12 +299,14 @@ def fc_penalty(model, device, penalty):
 
 
 def get_layers_penalty(model, penalty, args, tok):
-    layer_penalty = 0.0
+    all_penalty = fc_penalty_ = conv_penalty_ = 0.0
     if args.model_mode != 'c' and args.alpha != 0:
-        layer_penalty += args.alpha * fc_penalty(model, args.device, penalty)
+        fc_penalty_ = fc_penalty(model, args.device, penalty)
+        all_penalty += args.alpha * fc_penalty_
     if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
-        layer_penalty += args.beta * conv_penalty(model, args.device, penalty, args.prune_mode)
-    return layer_penalty
+        conv_penalty_ = conv_penalty(model, args.device, penalty, args.prune_mode)
+        all_penalty += args.beta * conv_penalty_
+    return all_penalty, fc_penalty_, conv_penalty_
 
 
 def accuracy(output, target, topk=(1,)):
@@ -326,8 +328,12 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
+    all_penalties = AverageMeter()
+    fc_penalties = AverageMeter()
+    conv_penalties = AverageMeter()
     criterion = nn.CrossEntropyLoss().to(args.device)
     penalty = nn.MSELoss(reduction='sum').to(args.device)
+    # penalty = nn.L1Loss(reduction='sum').to(args.device)
     model.train()
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
@@ -339,24 +345,26 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
 
         # compute output and loss
         output = model(input_var)
-        layer_penalty = get_layers_penalty(model, penalty, args, tok)
-        loss = criterion(output, target_var) + layer_penalty
+        all_penalty, fc_penalty_, conv_penalty_ = get_layers_penalty(model, penalty, args, tok)
+        loss = criterion(output, target_var) + all_penalty
+        all_penalties.update(all_penalty)
+        fc_penalties.update(fc_penalty_)
+        conv_penalties.update(conv_penalty_)
 
         # compute gradient and update
         optimizer.zero_grad()
         loss.backward()
         if tok == "prune_retrain":
             for name, p in model.named_parameters():
-                if args.model_mode == 'd' and 'conv' in name:
+                if (args.model_mode == 'd' and 'conv' in name or
+                        args.model_mode == 'c' and 'fc' in name or
+                        'mask' in name or
+                        'bias' in name):
                     continue
-                if args.model_mode == 'c' and 'fc' in name:
-                    continue
-                if 'mask' in name or 'bias' in name:
-                    continue
-                tensor = p.data.cpu().numpy()
-                grad_tensor = p.grad.data.cpu().numpy()
-                grad_tensor = np.where(tensor == 0, 0, grad_tensor)
-                p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
+                tensor_arr = p.data.cpu().numpy()
+                grad_tensor_arr = p.grad.data.cpu().numpy()
+                grad_tensor_arr = np.where(tensor_arr == 0, 0, grad_tensor_arr)
+                p.grad.data = torch.from_numpy(grad_tensor_arr).to(args.device)
         optimizer.step()
         output = output.float()
         loss = loss.float()
@@ -376,7 +384,7 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
                   f'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
                   f'Prec {top1.val:.3f} ({top1.avg:.3f})\t'
-                  f'Layer penalty {layer_penalty:.3f}')
+                  f'Layer penalty {all_penalties.avg:.3f} ( fc: {fc_penalties.avg:.3f} , conv: {conv_penalties.avg:.3f} )')
 
 
 def get_method_str(args):

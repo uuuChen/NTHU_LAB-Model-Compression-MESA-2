@@ -5,82 +5,75 @@ import scipy.linalg
 
 
 def apply_weight_sharing(model, model_mode, device, bits):
-    old_weight_list = list()
-    new_weight_list = list()
-    quantized_index_list = list()
-    quantized_center_list = list()
-    new_weight = quantized_index = quantized_center = None
-    for name, module in model.named_children():
-        print(name, module)
-        old_weight = module.weight.data.cpu().numpy()
-        shape = old_weight.shape
-        if len(shape) == 1:  # bn layer
-            print('=> pass')
+    ori_weights_list = list()
+    quan_weights_list = list()
+    quan_labels_list = list()
+    quan_centers_list = list()
+    ori_weights = quan_weights = quan_labels = quan_centers = None
+    for name, param in model.named_parameters():
+        if (model_mode == 'd' and 'conv' in name or
+                model_mode == 'c' and 'fc' in name or
+                'mask' in name or
+                'bias' in name or
+                'bn' in name):
+            print(f'{name:15} | {str(param.size()):35} | => pass')
             continue
-        elif len(shape) > 2:  # convolution layer
-            if model_mode == 'd':  # skip convolution layer
-                print('=> pass')
-                continue
-            print(f'=> quantize to {2**int(bits["conv"])} bits')
-            weight = old_weight.reshape(1, -1)
-            zero_index = np.where(weight == 0)[1]
-            mat = weight[0]
-            min_ = min(mat.data)
-            max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**int(bits['conv']))
-            kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
-                            algorithm="full")
-            kmeans.fit(mat.reshape(-1, 1))
-            cluster_weight = kmeans.cluster_centers_[kmeans.labels_].reshape(-1)
-            cluster_weight[zero_index] = 0.0
-            new_weight = cluster_weight
-            new_weight = new_weight.reshape(shape)
-            module.weight.data = torch.from_numpy(new_weight).float().to(device)
-            quantized_index = kmeans.labels_.reshape(shape)
-            quantized_center = kmeans.cluster_centers_
-        elif len(shape) == 2:  # dense layer
-            if model_mode == 'c':
-                print('=> pass')
-                continue
+
+        ori_weights = param.data.cpu().numpy()
+        ori_shape = ori_weights.shape
+
+        if len(ori_shape) == 4 and model_mode != 'd':  # convolution layer
+            print(f'{name:15} | {str(param.size()):35} | => quantize to {2**int(bits["conv"])} indice')
+            flat_weights = ori_weights.reshape(-1, 1)
+            zero_index = np.where(flat_weights == 0)[0]
+            space = np.linspace(np.min(flat_weights), np.max(flat_weights), num=2**int(bits['conv'])).reshape(-1, 1)
+            kmeans = KMeans(n_clusters=len(space), init=space, n_init=1, precompute_distances=True, algorithm="full")
+            kmeans.fit(flat_weights)
+            quan_weights = kmeans.cluster_centers_[kmeans.labels_]
+            quan_weights[zero_index] = 0.0
+            param.data = torch.from_numpy(quan_weights.reshape(ori_shape)).float().to(device)
+            quan_labels = kmeans.labels_.reshape(ori_shape)
+            quan_centers = kmeans.cluster_centers_
+
+        elif len(ori_shape) == 2 and model_mode != 'c':  # dense layer
             partition_num = int(model.partition_size[name])
-            N = int(old_weight.shape[0] / partition_num)
-            M = int(old_weight.shape[1] / partition_num)
-            print('=> partition number:', partition_num)
-            print('=> row number/partition:', N)
-            print('=> col number/partition:', M)
-            block_list = list()
-            j = 0
+            block_rows = ori_weights.shape[0] // partition_num
+            block_cols = ori_weights.shape[1] // partition_num
+            print(f'{name:15} | {param.shape:35} | partition: {partition_num:15}  block_rows: {block_rows:15} '
+                  f' {block_cols:15} | => quantize to {2**int(bits["fc"])} indice')
+            blocks = list()
             for i in range(partition_num):
-                block_list.append(old_weight[i*N:(i+1)*N, j*M:(j+1)*M])
-                j += 1
-            blocks = np.array(block_list)
-            mat = blocks.reshape(1, -1)[0]
-            min_ = min(mat.data)
-            max_ = max(mat.data)
-            space = np.linspace(min_, max_, num=2**int(bits['fc']))
-            kmeans = KMeans(n_clusters=len(space), init=space.reshape(-1, 1), n_init=1, precompute_distances=True,
-                            algorithm="full")
-            kmeans.fit(mat.reshape(-1, 1))
-            cluster_weight = kmeans.cluster_centers_[kmeans.labels_].reshape(-1)
+                block = ori_weights[
+                    i * block_rows: (i + 1) * block_rows,
+                    i * block_cols: (i + 1) * block_cols
+                ]
+                blocks.append(block)
+            blocks = np.array(blocks)
+            flat_weights = blocks.reshape(-1, 1)
+            space = np.linspace(np.min(flat_weights), np.max(flat_weights), num=2**int(bits['fc'])).reshape(-1, 1)
+            kmeans = KMeans(n_clusters=len(space), init=space, n_init=1, precompute_distances=True,  algorithm="full")
+            kmeans.fit(flat_weights)
 
-            t = tuple(cluster_weight.reshape(blocks.shape))
-            cluster_weight_arr = scipy.linalg.block_diag(*t)
-            new_weight = np.zeros(shape)
-            new_weight[:cluster_weight_arr.shape[0], :cluster_weight_arr.shape[1]] = cluster_weight_arr
-            new_weight = new_weight.reshape(shape)  # seems useless
-            module.weight.data = torch.from_numpy(new_weight).float().to(device)
+            # get quantized weights
+            nonzero_quan_weights = kmeans.cluster_centers_[kmeans.labels_].reshape(blocks.shape)
+            blocks_quan_weights = scipy.linalg.block_diag(*tuple(nonzero_quan_weights))
+            quan_weights = np.zeros(ori_shape)
+            quan_weights[:blocks_quan_weights.shape[0], :blocks_quan_weights.shape[1]] = blocks_quan_weights
+            param.data = torch.from_numpy(quan_weights).float().to(device)
 
-            index_t = tuple(kmeans.labels_.reshape(blocks.shape))
-            index_arr = scipy.linalg.block_diag(*index_t)
-            quantized_index = np.zeros(shape)
-            quantized_index[:index_arr.shape[0], :index_arr.shape[1]] = index_arr
-            quantized_center = kmeans.cluster_centers_
+            # get quantized labels
+            blocks_quan_labels = scipy.linalg.block_diag(*tuple(kmeans.labels_.reshape(blocks.shape)))
+            quan_labels = np.zeros(ori_shape)
+            quan_labels[:blocks_quan_labels.shape[0], :blocks_quan_labels.shape[1]] = blocks_quan_labels
 
-        old_weight_list.append(old_weight)
-        new_weight_list.append(new_weight)
-        quantized_index_list.append(quantized_index.astype(int))
-        quantized_center_list.append(quantized_center)
+            # get quantized centers (values)
+            quan_centers = kmeans.cluster_centers_
 
-    return old_weight_list, new_weight_list, quantized_index_list, quantized_center_list
+        ori_weights_list.append(ori_weights)
+        quan_weights_list.append(quan_weights)
+        quan_labels_list.append(quan_labels.astype(int))
+        quan_centers_list.append(quan_centers)
+
+    return ori_weights_list, quan_weights_list, quan_labels_list, quan_centers_list
 
 

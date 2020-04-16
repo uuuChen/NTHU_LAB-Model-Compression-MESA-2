@@ -118,14 +118,14 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
         param_arr = param.data.cpu().numpy()
         original = compressed = 0
         if 'weight' in name:
-            if 'conv' in name and args.model_mode is not 'd':
+            if 'conv' in name and args.model_mode != 'd':
                 original, compressed = mesa2_huffman_encode_conv4d(param_arr, 2**int(args.bits['conv']), directory)
-            elif 'fc' in name and args.model_mode is not 'c':
+            elif 'fc' in name and args.model_mode != 'c':
                 original, compressed = mesa2_huffman_encode_fc2d(
                     param_arr, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
         else:  # bias
-            if ('conv' in name and args.model_mode is not 'd' or
-                    'fc' in name and args.model_mode is not 'c'):
+            if ('conv' in name and args.model_mode != 'd' or
+                    'fc' in name and args.model_mode != 'c'):
                 bias = param.data.cpu().numpy()
                 original = bias.nbytes
                 compressed = original
