@@ -129,7 +129,7 @@ parser.add_argument('--out-quantized-re-folder', default='model_quantized_retrai
 args = train_loader = val_loader = None
 
 
-def environ_setting():
+def environment_setting():
     global args, train_loader, val_loader
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
@@ -150,14 +150,14 @@ def environ_setting():
 
 def check_folders_exist():
     os.makedirs(f'{args.save_dir}', exist_ok=True)
-    os.makedirs(f'{args.save_dir}/{args.out_oldweight_folder}', exist_ok=True)
-    os.makedirs(f'{args.save_dir}/{args.out_pruned_folder}', exist_ok=True)
-    os.makedirs(f'{args.save_dir}/{args.out_pruned_re_folder}', exist_ok=True)
-    os.makedirs(f'{args.save_dir}/{args.out_quantized_folder}', exist_ok=True)
-    os.makedirs(f'{args.save_dir}/{args.out_quantized_re_folder}', exist_ok=True)
+    # os.makedirs(f'{args.save_dir}/{args.out_oldweight_folder}', exist_ok=True)
+    # os.makedirs(f'{args.save_dir}/{args.out_pruned_folder}', exist_ok=True)
+    # os.makedirs(f'{args.save_dir}/{args.out_pruned_re_folder}', exist_ok=True)
+    # os.makedirs(f'{args.save_dir}/{args.out_quantized_folder}', exist_ok=True)
+    # os.makedirs(f'{args.save_dir}/{args.out_quantized_re_folder}', exist_ok=True)
 
 
-def run_process():
+def run():
     util.log(f"{args.save_dir}/{args.log}", "--------------------------configure----------------------")
     util.log(f"{args.save_dir}/{args.log}", f"{args}\n")
     print(f'Method | {args.method_str}')  # alpha corresponds to fc, beta corresponds to conv
@@ -259,9 +259,9 @@ def encoding_process(model):
 
 
 def main():
-    environ_setting()
+    environment_setting()
     check_folders_exist()
-    run_process()
+    run()
 
 
 if __name__ == '__main__':

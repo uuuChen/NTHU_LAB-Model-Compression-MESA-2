@@ -15,12 +15,13 @@ def apply_weight_sharing(model, model_mode, device, bits):
         old_weight = module.weight.data.cpu().numpy()
         shape = old_weight.shape
         if len(shape) == 1:  # bn layer
+            print('=> pass')
             continue
         elif len(shape) > 2:  # convolution layer
             if model_mode == 'd':  # skip convolution layer
-                print('\tpass')
+                print('=> pass')
                 continue
-            print(f'\tquantize to {2**int(bits["conv"])} bits')
+            print(f'=> quantize to {2**int(bits["conv"])} bits')
             weight = old_weight.reshape(1, -1)
             zero_index = np.where(weight == 0)[1]
             mat = weight[0]
@@ -39,14 +40,14 @@ def apply_weight_sharing(model, model_mode, device, bits):
             quantized_center = kmeans.cluster_centers_
         elif len(shape) == 2:  # dense layer
             if model_mode == 'c':
-                print('\tpass')
+                print('=> pass')
                 continue
             partition_num = int(model.partition_size[name])
             N = int(old_weight.shape[0] / partition_num)
             M = int(old_weight.shape[1] / partition_num)
-            print('\tpartition number:', partition_num)
-            print('\trow number/partition:', N)
-            print('\tcol number/partition:', M)
+            print('=> partition number:', partition_num)
+            print('=> row number/partition:', N)
+            print('=> col number/partition:', M)
             block_list = list()
             j = 0
             for i in range(partition_num):

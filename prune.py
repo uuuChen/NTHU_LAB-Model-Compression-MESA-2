@@ -158,8 +158,7 @@ class PruningModule(Module):
                         print(f'{name:6} | original channel nums: {channel_nums:4} | prune channel nums: '
                               f'{prune_channel_nums:4} | target channel prune rate: '
                               f'{target_channel_prune_rate * 100.:.2f}% | actual channel prune rate: '
-                              f'{actual_channel_prune_rate * 100.:.2f}% | channel bias: {channel_bias * 100.:.2f}%\n')
-
+                              f'{actual_channel_prune_rate * 100.:.2f}% | channel bias: {channel_bias * 100.:.2f}%')
                     new_pruning_rates.append(actual_channel_prune_rate)
 
                 conv_idx += 1
