@@ -59,9 +59,9 @@ def print_nonzeros(model, log_file):
         total_params = np.prod(tensor.shape)
         nonzero += nz_count
         total += total_params
-        log(log_file, f'{name:20} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%)'
+        log(log_file, f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%)'
                       f' | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
-        print(f'{name:20} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | '
+        print(f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | '
               f'total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
     log(log_file, f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : '
                   f'{total/nonzero:10.2f}x  ({100 * (total-nonzero) / total:6.2f}% pruned)')
@@ -103,7 +103,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
     return model
 
 
-def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
+def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
     criterion = nn.CrossEntropyLoss().to(args.device)
     args.lr = args.quantize_retrain_lr
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
@@ -128,7 +128,7 @@ def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
             loss = criterion(output, target_var)
             optimizer.zero_grad()
             loss.backward()
-            k = 0
+            # k = 0
             for name, p in model.named_parameters():
                 if (args.model_mode == 'd' and 'conv' in name or
                         args.model_mode == 'c' and 'fc' in name or
@@ -137,7 +137,8 @@ def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
                         'bn' in name):
                     continue
                 quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
-                quan_labels = quan_labels_list[k]
+                # quan_labels = quan_labels_list[k]
+                quan_labels = quan_names2labels[name]
                 tensor = p.data.cpu().numpy()
                 grad_tensor = p.grad.data.cpu().numpy()
                 grad_center_array = list()
@@ -149,7 +150,7 @@ def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
                 grad_tensor = grad_center_array[quan_labels]
                 grad_tensor = np.where(tensor == 0, 0, grad_tensor)
                 p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
-                k += 1
+                # k += 1
             optimizer.step()
             output = output.float()
             loss = loss.float()
@@ -196,8 +197,7 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
 
         # compute output
         output = model(input_var)
-        all_penalty, fc_penalty_, conv_penalty_ = get_layers_penalty(model, penalty, args, tok)
-        loss = criterion(output, target_var) + all_penalty
+        loss = criterion(output, target_var)
         output = output.float()
         loss = loss.float()
 
