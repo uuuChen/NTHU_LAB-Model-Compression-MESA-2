@@ -5,6 +5,6 @@ model_default/
 .idea/
 __pycache__/
 */__pycache__/
-test
+test*
 net/
 encodings/
