@@ -41,8 +41,6 @@ class PruningModule(Module):
         """
         for name, module in self.named_modules():
             if name in layerlist:
-                # ['conv1','conv2','conv3','conv4','conv5','conv6','conv7','conv8','conv9','conv10','conv11','conv12','
-                # conv13','fc1', 'fc2', 'fc3']:
                 threshold = np.std(module.weight.data.cpu().numpy()) * s
                 print(f'Pruning with threshold : {threshold} for layer {name}')
                 self._prune_by_threshold(module, threshold)

@@ -47,8 +47,14 @@ parser.add_argument('--start-epoch', '-sep', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--batch-size', '-bs', default=256, type=int,metavar='N',
                     help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning-rate', '-lr', default=0.1, type=float,
-                    metavar='LR', help='initial learning rate')
+# parser.add_argument('--lr', '--learning-rate', '-lr', default=0.1, type=float,
+#                     metavar='LR', help='initial learning rate')
+parser.add_argument('--train-lr', '-tlr', default=0.1, type=float,
+                    metavar='TLR', help='train learning rate')
+parser.add_argument('--prune-retrain-lr', '-prlr', default=0.0001, type=float,
+                    metavar='PRLR', help='pruning retrain learning rate')
+parser.add_argument('--quantize-retrain-lr', '-qrlr', default=0.0001, type=float,
+                    metavar='QRLR', help='quantize retrain learning rate')
 parser.add_argument('--lr-drop-interval', '-lr-drop', default=50, type=int,
                     metavar='LRD', help='learning rate drop interval (default: 50)')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -190,7 +196,7 @@ def initial_process():
     print(model)
     util.print_model_parameters(model)
     print("------------------------- Initial training -------------------------------")
-    model = util.initial_train(model, args, train_loader, val_loader, 'initial')
+    model = util.initial_train(model, args, train_loader, val_loader, 'initial_train')
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{accuracy} ({accuracy5})")
 
@@ -237,14 +243,13 @@ def quantize_process():
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{accuracy} ({accuracy5})")
 
     print('------------------------------- accuacy after weight sharing -------------------------------')
-    old_weight_list, new_weight_list, quantized_index_list, quantized_center_list = (
-        apply_weight_sharing(model, args.model_mode, args.device, args.bits))
+    quan_labels_list = apply_weight_sharing(model, args.model_mode, args.device, args.bits)
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", accuracy, "initial", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
 
     print('------------------------------- retraining -------------------------------------------')
-    util.quantized_retrain(model, args, quantized_index_list, train_loader, val_loader)
+    util.quantized_retrain(model, args, quan_labels_list, train_loader, val_loader)
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", accuracy, "end", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after qauntize and retrain\t{accuracy} ({accuracy5})")

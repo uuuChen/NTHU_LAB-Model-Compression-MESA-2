@@ -5,11 +5,8 @@ import scipy.linalg
 
 
 def apply_weight_sharing(model, model_mode, device, bits):
-    ori_weights_list = list()
-    quan_weights_list = list()
     quan_labels_list = list()
-    quan_centers_list = list()
-    ori_weights = quan_weights = quan_labels = quan_centers = None
+    quan_labels = None
     for name, param in model.named_parameters():
         if (model_mode == 'd' and 'conv' in name or
                 model_mode == 'c' and 'fc' in name or
@@ -25,15 +22,14 @@ def apply_weight_sharing(model, model_mode, device, bits):
         if len(ori_shape) == 4 and model_mode != 'd':  # convolution layer
             print(f'{name:15} | {str(param.size()):35} | => quantize to {2**int(bits["conv"])} indice')
             flat_weights = ori_weights.reshape(-1, 1)
-            zero_index = np.where(flat_weights == 0)[0]
+            zero_indice = np.where(flat_weights == 0)[0]
             space = np.linspace(np.min(flat_weights), np.max(flat_weights), num=2**int(bits['conv'])).reshape(-1, 1)
             kmeans = KMeans(n_clusters=len(space), init=space, n_init=1, precompute_distances=True, algorithm="full")
             kmeans.fit(flat_weights)
             quan_weights = kmeans.cluster_centers_[kmeans.labels_]
-            quan_weights[zero_index] = 0.0
+            quan_weights[zero_indice] = 0.0
             param.data = torch.from_numpy(quan_weights.reshape(ori_shape)).float().to(device)
             quan_labels = kmeans.labels_.reshape(ori_shape)
-            quan_centers = kmeans.cluster_centers_
 
         elif len(ori_shape) == 2 and model_mode != 'c':  # dense layer
             partition_num = int(model.partition_size[name[:3]])
@@ -49,12 +45,13 @@ def apply_weight_sharing(model, model_mode, device, bits):
                 ]
                 blocks.append(block)
             blocks = np.array(blocks)
-            flat_weights = blocks.reshape(-1, 1)
-            space = np.linspace(np.min(flat_weights), np.max(flat_weights), num=2**int(bits['fc'])).reshape(-1, 1)
+            nonzero_flat_weights = blocks.reshape(-1, 1)
+            space = np.linspace(
+                np.min(nonzero_flat_weights), np.max(nonzero_flat_weights), num=2**int(bits['fc'])).reshape(-1, 1)
             kmeans = KMeans(n_clusters=len(space), init=space, n_init=1, precompute_distances=True,  algorithm="full")
-            kmeans.fit(flat_weights)
+            kmeans.fit(nonzero_flat_weights)
 
-            # get quantized weights
+            # get quantized weights and set model.param
             nonzero_quan_weights = kmeans.cluster_centers_[kmeans.labels_].reshape(blocks.shape)
             blocks_quan_weights = scipy.linalg.block_diag(*tuple(nonzero_quan_weights))
             quan_weights = np.zeros(ori_shape)
@@ -66,14 +63,8 @@ def apply_weight_sharing(model, model_mode, device, bits):
             quan_labels = np.zeros(ori_shape)
             quan_labels[:blocks_quan_labels.shape[0], :blocks_quan_labels.shape[1]] = blocks_quan_labels
 
-            # get quantized centers (values)
-            quan_centers = kmeans.cluster_centers_
-
-        ori_weights_list.append(ori_weights)
-        quan_weights_list.append(quan_weights)
         quan_labels_list.append(quan_labels.astype(int))
-        quan_centers_list.append(quan_centers)
 
-    return ori_weights_list, quan_weights_list, quan_labels_list, quan_centers_list
+    return quan_labels_list
 
 

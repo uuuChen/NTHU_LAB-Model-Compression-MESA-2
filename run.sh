@@ -13,8 +13,7 @@ python main.py -mm d -initp -quanp -encp -umfcm -b conv=8,fc=5 -p fc1=10,fc2=10,
 # ----------------------- MESA2-conv ------------------------------
 # ----------- AlexNet ---------------
 # norm-base
-python main.py -mm c -prunep -quanp -encp -b conv=8,fc=5 -pm filter-norm -be 0.0 -sd model_mesa_0.0_filter_norm_conv
-python main.py -mm c -prunep -quanp -encp -b conv=8,fc=5 -pm filter-norm -be 5.0 -sd model_mesa_5.0_filter_norm_conv
+python main.py -mm c -prunep -quanp -encp -b conv=8,fc=5 -pm filter-norm -be 0.0 -sd model_mesa_0.0_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149
 # geometric median
 python main.py -mm c -initp -prunep -quanp -encp -b conv=8,fc=5 -pm filter-gm -be 0.0 -sd model_mesa_0.0_filter_gm_conv
 python main.py -mm c -initp -prunep -quanp -encp -b conv=8,fc=5 -pm filter-gm -be 1.0 -sd model_mesa_1.0_filter_gm_conv

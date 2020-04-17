@@ -72,11 +72,12 @@ def print_nonzeros(model, log_file):
 def initial_train(model, args, train_loader, val_loader, tok):
     best_prec1 = 0.0
     cudnn.benchmark = True if args.use_cuda else False
-    if tok == 'prune_retrain':
-        epochs = args.reepochs
-        args.lr = 1e-4
-    else:
+    if tok == 'initial_train':
         epochs = args.epochs
+        args.lr = args.train_lr
+    else:  # tok == 'prune_retrain'
+        epochs = args.reepochs
+        args.lr = args.prune_retrain_lr
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     print(f'start epoch {args.start_epoch} / end epoch {epochs}')
     for epoch in range(args.start_epoch, epochs):
@@ -102,27 +103,27 @@ def initial_train(model, args, train_loader, val_loader, tok):
     return model
 
 
-def quantized_retrain(model, args, quantized_index_list, train_loader, val_loader):
+def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
     criterion = nn.CrossEntropyLoss().to(args.device)
-    args.lr = 1e-4
+    args.lr = args.quantize_retrain_lr
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     for epoch in range(args.qauntize_epochs):
-        batch_time = AverageMeter()
-        data_time = AverageMeter()
+        batch_times = AverageMeter()
+        data_times = AverageMeter()
         losses = AverageMeter()
-        top1 = AverageMeter()
+        top1s = AverageMeter()
         model.train()
         end = time.time()
         optimizer = adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
         for i, (input, target) in enumerate(train_loader):
-            data_time.update(time.time() - end)
+            data_times.update(time.time() - end)
             target = target.to(args.device)
             input_var = torch.autograd.Variable(input).to(args.device)
             target_var = torch.autograd.Variable(target).to(args.device)
 
-            # compute output and update
+            # compute output and update, and let nodes quantized in the same label have the same average gradient
             output = model(input_var)
             loss = criterion(output, target_var)
             optimizer.zero_grad()
@@ -135,16 +136,17 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
                         'bias' in name or
                         'bn' in name):
                     continue
-                quantized_index = quantized_index_list[k]
+                quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
+                quan_labels = quan_labels_list[k]
                 tensor = p.data.cpu().numpy()
                 grad_tensor = p.grad.data.cpu().numpy()
                 grad_center_array = list()
-                for j in range(2 ** int(args.bits['fc' if 'fc' in name else 'conv'])):
-                    grad_by_index = grad_tensor[quantized_index == j]
+                for j in range(quan_bits):
+                    grad_by_index = grad_tensor[quan_labels == j]
                     grad_center = np.mean(grad_by_index)
                     grad_center_array.append(grad_center)
                 grad_center_array = np.array(grad_center_array)
-                grad_tensor = grad_center_array[quantized_index]
+                grad_tensor = grad_center_array[quan_labels]
                 grad_tensor = np.where(tensor == 0, 0, grad_tensor)
                 p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
                 k += 1
@@ -155,17 +157,17 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
             # measure accuracy and record loss
             prec1 = accuracy(output.data, target, topk=(1,))[0]
             losses.update(loss.item(), input.size(0))
-            top1.update(prec1, input.size(0))
+            top1s.update(prec1, input.size(0))
 
             # measure elapsed time
-            batch_time.update(time.time() - end)
+            batch_times.update(time.time() - end)
             end = time.time()
             if i % args.print_freq == 0:
                 print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
-                      f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      f'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                      f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
+                      f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
                       f'Loss {losses.val:.4f} ({losses.avg:.4f})\t'
-                      f'Prec {top1.val:.3f} ({top1.avg:.3f})')
+                      f'Prec {top1s.val:.3f} ({top1s.avg:.3f})')
 
         # evaluate on validation set
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
@@ -178,7 +180,7 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
 
 
 def validate(val_loader, model, args, topk=(1,), tok=''):
-    batch_time = AverageMeter()
+    batch_times = AverageMeter()
     losses = AverageMeter()
     topk_avg_meters = [AverageMeter() for _ in range(len(topk))]
 
@@ -205,14 +207,14 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
         prec_str = str()
         for j in range(len(topk)):
             topk_avg_meters[j].update(preck[j], input.size(0))
-            prec_str += f'Prec {topk[j]} {topk_avg_meters[j].val:.3f} ({topk_avg_meters[j].avg:.3f})\t'
+            prec_str += f'Prec {topk[j]}: {topk_avg_meters[j].val:.3f} ({topk_avg_meters[j].avg:.3f})\t'
 
         # measure elapsed time
-        batch_time.update(time.time() - end)
+        batch_times.update(time.time() - end)
         end = time.time()
         if i % args.print_freq == 0:
             print(f'Test: [{i}/{len(val_loader)}]\t'
-                  f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
                   f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
                   f'{prec_str}')
 
@@ -250,9 +252,10 @@ def conv_penalty(model, device, penalty, mode):
                             module.weight[i, left_channel_indice[j+1], :, :]
                         )
                     penalty_filters += penalty_channels
-            penalty_filters /= (num_of_left_filters - 1)
+            # penalty_filters /= (num_of_left_filters - 1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
+    # penalty = torch.sum(torch.stack(penalty_layers))
     return penalty.to(device)
 
 
@@ -261,32 +264,32 @@ def fc_penalty(model, device, penalty):
     for i in range(int(model.partition_size['fc1']) - 1):
         penalty_fc1 += penalty(
             model.fc1.weight[
-               i*model.block_row_size1: (i+1)*model.block_row_size1: 1,
-               i*model.block_col_size1: (i+1)*model.block_col_size1: 1
+               i * model.block_row_size1: (i + 1) * model.block_row_size1: 1,
+               i * model.block_col_size1: (i + 1) * model.block_col_size1: 1
             ],
             model.fc1.weight[
-                (i+1)*model.block_row_size1: (i+2)*model.block_row_size1: 1,
-                (i+1)*model.block_col_size1: (i+2)*model.block_col_size1: 1
+                (i + 1) * model.block_row_size1: (i + 2) * model.block_row_size1: 1,
+                (i + 1) * model.block_col_size1: (i + 2) * model.block_col_size1: 1
             ])
     for i in range(int(model.partition_size['fc2']) - 1):
         penalty_fc2 += penalty(
             model.fc2.weight[
-                i*model.block_row_size2: (i+1)*model.block_row_size2: 1,
-                i*model.block_col_size2: (i+1)*model.block_col_size2: 1
+                i * model.block_row_size2: (i + 1) * model.block_row_size2: 1,
+                i * model.block_col_size2: (i + 1) * model.block_col_size2: 1
             ],
             model.fc2.weight[
-                (i+1)*model.block_row_size2: (i+2)*model.block_row_size2: 1,
-                (i+1)*model.block_col_size2: (i+2)*model.block_col_size2: 1
+                (i + 1)*model.block_row_size2: (i + 2)*model.block_row_size2: 1,
+                (i + 1)*model.block_col_size2: (i + 2)*model.block_col_size2: 1
             ])
     for i in range(int(model.partition_size['fc3']) - 1):
         penalty_fc3 += penalty(
             model.fc3.weight[
-                i*model.block_row_size3: (i+1)*model.block_row_size3: 1,
-                i*model.block_col_size3: (i+1)*model.block_col_size3: 1
+                i * model.block_row_size3: (i + 1) * model.block_row_size3: 1,
+                i * model.block_col_size3: (i + 1) * model.block_col_size3: 1
             ],
             model.fc3.weight[
-                (i+1)*model.block_row_size3: (i+2)*model.block_row_size3: 1,
-                (i+1)*model.block_col_size3: (i+2)*model.block_col_size3: 1
+                (i + 1) * model.block_row_size3: (i + 2) * model.block_row_size3: 1,
+                (i + 1) * model.block_col_size3: (i + 2) * model.block_col_size3: 1
             ])
 
     penalty_fc1 = penalty_fc1 / (int(model.partition_size['fc1']) - 1)
@@ -322,10 +325,10 @@ def accuracy(output, target, topk=(1,)):
 
 def train(train_loader, model, optimizer, epoch, args, tok=""):
     """ Train one epoch. """
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
+    batch_times = AverageMeter()
+    data_times = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
+    top1s = AverageMeter()
     all_penalties = AverageMeter()
     fc_penalties = AverageMeter()
     conv_penalties = AverageMeter()
@@ -335,7 +338,7 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
     model.train()
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
-        data_time.update(time.time() - end)  # measure data loading time
+        data_times.update(time.time() - end)  # measure data loading time
 
         target = target.to(args.device)
         input_var = torch.autograd.Variable(input).to(args.device)
@@ -352,7 +355,7 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
         # compute gradient and update
         optimizer.zero_grad()
         loss.backward()
-        if tok == "prune_retrain":
+        if tok == "prune_retrain":  # let the gradient of the pruned node become 0
             for name, p in model.named_parameters():
                 if (args.model_mode == 'd' and 'conv' in name or
                         args.model_mode == 'c' and 'fc' in name or
@@ -370,18 +373,19 @@ def train(train_loader, model, optimizer, epoch, args, tok=""):
         # measure accuracy and record loss
         prec1 = accuracy(output.data, target, topk=(1,))[0]
         losses.update(loss.item(), input.size(0))
-        top1.update(prec1, input.size(0))
+        top1s.update(prec1, input.size(0))
 
         # measure elapsed time
-        batch_time.update(time.time() - end)
+        batch_times.update(time.time() - end)
         end = time.time()
 
+        # print log
         if i % args.print_freq == 0:
             print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
-                  f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  f'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
+                  f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
                   f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
-                  f'Prec {top1.val:.3f} ({top1.avg:.3f})\t'
+                  f'Prec {top1s.val:.3f} ({top1s.avg:.3f})\t'
                   f'Layer penalty {all_penalties.avg:.3f} ( fc: {fc_penalties.avg:.3f} , conv: {conv_penalties.avg:.3f} )')
 
 
