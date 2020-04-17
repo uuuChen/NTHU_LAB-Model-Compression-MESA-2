@@ -258,7 +258,7 @@ def encoding_process():
 
     print('------------------------------- encoding -------------------------------------------')
     mesa2_huffman_encode_model(model, args)
-    # deepc_huffman_encode_model(model)
+    # deepc_huffman_encode_model(model, args)
 
 
 def main():

@@ -1,12 +1,14 @@
 import os
-from collections import defaultdict, namedtuple
-from heapq import heappush, heappop, heapify
-import struct
-from pathlib import Path
-
 import torch
 import numpy as np
+import struct
+from collections import defaultdict, namedtuple
+from heapq import heappush, heappop, heapify
+from pathlib import Path
+
 from scipy.sparse import csr_matrix, csc_matrix
+
+import util
 
 Node = namedtuple('Node', 'freq value left right')
 Node.__lt__ = lambda x, y: x.freq < y.freq
@@ -227,7 +229,8 @@ def huffman_encode_conv4d(weight, name, directory):  # add
     t3, d3 = huffman_encode(len_arr, name + f'_{form}_length', directory)
 
     # Print statistics
-    original = data_arr.nbytes + indices_arr.nbytes + indptr_arr.nbytes + len_arr.nbytes
+    # original = data_arr.nbytes + indices_arr.nbytes + indptr_arr.nbytes + len_arr.nbytes
+    original = data_arr.nbytes
     compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
 
     return original, compressed
@@ -295,48 +298,52 @@ def huffman_decode_sparse2d(shape, name, directory):
 
 
 # Encode / Decode models
-def deepc_huffman_encode_model(model, directory='encodings/'):
+def deepc_huffman_encode_model(model, args, directory='encodings/'):
     os.makedirs(directory, exist_ok=True)
-    original = 0
-    compressed = 0
-    original_total = 0
-    compressed_total = 0
+    original_total = compressed_total = 0
     print(f"{'Layer':<15} | {'original':>10} {'compressed':>10} {'improvement':>11} {'percent':>7}")
     print('-' * 70)
     for name, param in model.named_parameters():
-        if 'mask' in name or 'bn' in name or 'bias' in name:
+        if 'mask' in name or 'bn' in name:
             continue
+        original = compressed = 0
+        ignore = False
         if 'weight' in name:
             weight = param.data.cpu().numpy()
-            if 'conv' in name:
-                original_4d, compressed_4d = huffman_encode_conv4d(weight, name, directory)
-                original += original_4d
-                compressed += compressed_4d
-            elif 'fc' in name:
-                original_2d, compressed_2d = huffman_encode_sparse2d(weight, name, directory)
-                original += original_2d
-                compressed += compressed_2d
-            print(
-                f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x "
-                f"{100 * compressed / original:>6.2f}%")
+            if 'conv' in name and args.model_mode != 'd':
+                original, compressed = huffman_encode_conv4d(weight, name, directory)
+            elif 'fc' in name and args.model_mode != 'c':
+                original, compressed = huffman_encode_sparse2d(weight, name, directory)
+            else:
+                ignore = True
         else:  # bias
-            # Note that we do not huffman encode bias
-            bias = param.data.cpu().numpy()
-            bias.dump(f'{directory}/{name}')
+            if ('conv' in name and args.model_mode != 'd' or
+                    'fc' in name and args.model_mode != 'c'):
+                bias = param.data.cpu().numpy()
+                bias.dump(f'{directory}/{name}')
+                original = bias.nbytes
+                compressed = original
+            else:
+                ignore = True
 
-            # Print statistics
-            original = bias.nbytes
-            compressed = original
-
+        if ignore:
+            log_str = f"{name:<15} | {'* pass':>10}"
+            print(log_str)
+            util.log(f"{args.save_dir}/{args.log}", log_str)
+        else:
             print(f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x "
                   f"{100 * compressed / original:>6.2f}%")
+            original_total += original
+            compressed_total += compressed
 
-        original_total += original
-        compressed_total += compressed
-
-    print('-'*70)
-    print(f"{'total':15} | {original_total:>10} {compressed_total:>10} {original_total / compressed_total:>10.2f}x "
-          f"{100 * compressed_total / original_total:>6.2f}%")
+    # Print and log statistics
+    part_model_original_bytes = util.get_part_model_original_bytes(model, args)
+    log_str = (f'\ncompression rate (without pruned params): {original_total} / {compressed_total} '
+               f'({original_total / compressed_total:.3f} X) \n'
+               f'compression rate (include pruned params): {part_model_original_bytes} / {compressed_total} '
+               f'({part_model_original_bytes / compressed_total:.3f} X)')
+    print('-' * 70)
+    print(log_str)
 
 
 def deepc_huffman_decode_model(model, directory='encodings/'):

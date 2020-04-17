@@ -36,11 +36,11 @@ def apply_weight_sharing(model, model_mode, device, bits):
             quan_centers = kmeans.cluster_centers_
 
         elif len(ori_shape) == 2 and model_mode != 'c':  # dense layer
-            partition_num = int(model.partition_size[name])
+            partition_num = int(model.partition_size[name[:3]])
             block_rows = ori_weights.shape[0] // partition_num
             block_cols = ori_weights.shape[1] // partition_num
-            print(f'{name:15} | {param.shape:35} | partition: {partition_num:15}  block_rows: {block_rows:15} '
-                  f' {block_cols:15} | => quantize to {2**int(bits["fc"])} indice')
+            print(f'{name:15} | {str(param.shape):35} | partition: {partition_num} , block_rows: {block_rows} , '
+                  f'block_cols: {block_cols} | => quantize to {2**int(bits["fc"])} indice')
             blocks = list()
             for i in range(partition_num):
                 block = ori_weights[

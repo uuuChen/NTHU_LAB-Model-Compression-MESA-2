@@ -3,19 +3,6 @@ from huffmancoding import huffman_encode
 import util
 
 
-def get_part_model_original_bytes(model, args):
-    num_of_params = 0
-    for name, param in model.named_parameters():
-        if 'mask' in name or 'bn' in name:
-            continue
-        if ('conv' in name and args.model_mode != 'd' or
-                'fc' in name and args.model_mode != 'c' or
-                'bias' in name):
-            num_of_params += len(param.reshape(-1))
-    model_bytes = num_of_params * 4  # 4 bytes each float number
-    return model_bytes
-
-
 def to_index(layer):
     value_set = np.unique(layer)
     value2idx_dict = dict(zip(value_set, range(len(value_set))))
@@ -112,39 +99,53 @@ def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, maxdistance, directory):
 
 def mesa2_huffman_encode_model(model, args, directory='encodings/'):
     original_total = compressed_total = 0  # the unit is bytes
+    print(f"{'Layer':<15} | {'original':>10} {'compressed':>10} {'improvement':>11} {'percent':>7}")
+    print('-' * 70)
     for name, param in model.named_parameters():
         if 'mask' in name or 'bn' in name:
             continue
-        param_arr = param.data.cpu().numpy()
         original = compressed = 0
+        ignore = False
         if 'weight' in name:
+            weight = param.data.cpu().numpy()
             if 'conv' in name and args.model_mode != 'd':
-                original, compressed = mesa2_huffman_encode_conv4d(param_arr, 2**int(args.bits['conv']), directory)
+                original, compressed = mesa2_huffman_encode_conv4d(weight, 2**int(args.bits['conv']), directory)
             elif 'fc' in name and args.model_mode != 'c':
                 original, compressed = mesa2_huffman_encode_fc2d(
-                    param_arr, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
+                    weight, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
+            else:
+                ignore = True
         else:  # bias
             if ('conv' in name and args.model_mode != 'd' or
                     'fc' in name and args.model_mode != 'c'):
                 bias = param.data.cpu().numpy()
                 original = bias.nbytes
                 compressed = original
-        original_total += original
-        compressed_total += compressed
+            else:
+                ignore = True
 
         # Print and log statistics
-        log_str = f'{name:14} | original / compressed bytes : {original: 7} / {compressed: 7}'
-        print(log_str)
-        util.log(f"{args.save_dir}/{args.log}", log_str)
+        if ignore:
+            log_str = f"{name:<15} | {'* pass':>10}"
+            print(log_str)
+            util.log(f"{args.save_dir}/{args.log}", log_str)
+        else:
+            original_total += original
+            compressed_total += compressed
+            log_str = (f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x " 
+                       f"{100 * compressed / original:>6.2f}%")
+            print(log_str)
+            util.log(f"{args.save_dir}/{args.log}", log_str)
 
     # Print and log statistics
-    part_model_original_bytes = get_part_model_original_bytes(model, args)
-    log_str = (f'\ncompression rate (without pruning): {original_total} / {compressed_total} '
+    part_model_original_bytes = util.get_part_model_original_bytes(model, args)
+    log_str = (f'\ncompression rate (without pruned params): {original_total} / {compressed_total} '
                f'({ original_total / compressed_total:.3f} X) \n' 
-               f'compression rate (include pruning): { part_model_original_bytes} / {compressed_total} '
+               f'compression rate (include pruned params): { part_model_original_bytes} / {compressed_total} '
                f'({ part_model_original_bytes / compressed_total:.3f} X)')
-    print(log_str)
     util.log(f"{args.save_dir}/{args.log}", log_str)
+    print('-' * 70)
+    print(log_str)
 
 
 

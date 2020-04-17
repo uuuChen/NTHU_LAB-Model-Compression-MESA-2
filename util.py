@@ -104,7 +104,6 @@ def initial_train(model, args, train_loader, val_loader, tok):
 
 def quantized_retrain(model, args, quantized_index_list, train_loader, val_loader):
     criterion = nn.CrossEntropyLoss().to(args.device)
-    best_prec5 = 0
     args.lr = 1e-4
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     for epoch in range(args.qauntize_epochs):
@@ -112,7 +111,7 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
         data_time = AverageMeter()
         losses = AverageMeter()
         top1 = AverageMeter()
-        model.train()  # switch to train mode
+        model.train()
         end = time.time()
         optimizer = adjust_learning_rate(optimizer, epoch, args)
 
@@ -175,7 +174,6 @@ def quantized_retrain(model, args, quantized_index_list, train_loader, val_loade
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
         log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
 
-    model = save_masked_checkpoint(model, 'quantized_re', best_prec5, args.reepochs, args)
     return model
 
 
@@ -395,6 +393,18 @@ def get_method_str(args):
         method_list.append(f'beta_{args.beta}')
     method_str = '_'.join(method_list)
     return method_str
+
+
+def get_part_model_original_bytes(model, args):
+    model_bytes = 0
+    for name, param in model.named_parameters():
+        if 'mask' in name or 'bn' in name:
+            continue
+        if ('conv' in name and args.model_mode != 'd' or
+                'fc' in name and args.model_mode != 'c' or
+                'bias' in name):
+            model_bytes += param.data.cpu().numpy().nbytes
+    return model_bytes
 
 
 class AverageMeter(object):

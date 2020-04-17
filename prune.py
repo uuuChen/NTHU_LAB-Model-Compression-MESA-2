@@ -102,7 +102,6 @@ class PruningModule(Module):
         object_indice = np.argsort(sum_of_objects)
         pruned_object_nums = round(object_nums * prune_rate)
         pruned_indice = np.sort(object_indice[:pruned_object_nums])
-        # print(list(zip(pruned_indice, sum_of_objects[object_indice])))
         return pruned_indice
 
     def _prune_by_indice(self, module, dim, indices):
