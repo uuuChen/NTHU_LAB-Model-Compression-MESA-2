@@ -171,7 +171,7 @@ def quantized_retrain(model, args, quan_labels_list, train_loader, val_loader):
 
         # evaluate on validation set
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
-        model = save_masked_checkpoint(model, 'quantized_re', prec5, epoch, args)
+        # model = save_masked_checkpoint(model, 'quantized_re', prec5, epoch, args)
         log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
         log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")

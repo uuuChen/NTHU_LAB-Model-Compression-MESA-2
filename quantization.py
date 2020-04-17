@@ -6,7 +6,6 @@ from sklearn.cluster import KMeans
 def apply_weight_sharing(model, args):
     quan_labels_list = list()
     quan_labels = None
-
     for name, param in model.named_parameters():
         if (args.model_mode == 'd' and 'conv' in name or
                 args.model_mode == 'c' and 'fc' in name or
@@ -26,8 +25,7 @@ def apply_weight_sharing(model, args):
         print(f'{name:15} | {str(param.size()):35} | => quantize to {quan_range} indice')
         nonzero_flat_weights = ori_weights[ori_weights != 0].reshape(-1, 1)
         nonzero_indice = np.where(ori_weights != 0)
-        space = np.linspace(
-            np.min(nonzero_flat_weights), np.max(nonzero_flat_weights), num=quan_range).reshape(-1, 1)
+        space = np.linspace(np.min(nonzero_flat_weights), np.max(nonzero_flat_weights), num=quan_range).reshape(-1, 1)
         kmeans = KMeans(n_clusters=len(space), init=space, n_init=1, precompute_distances=True, algorithm="full")
         kmeans.fit(nonzero_flat_weights)
 

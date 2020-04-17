@@ -47,8 +47,6 @@ parser.add_argument('--start-epoch', '-sep', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--batch-size', '-bs', default=256, type=int,metavar='N',
                     help='mini-batch size (default: 128)')
-# parser.add_argument('--lr', '--learning-rate', '-lr', default=0.1, type=float,
-#                     metavar='LR', help='initial learning rate')
 parser.add_argument('--train-lr', '-tlr', default=0.1, type=float,
                     metavar='TLR', help='train learning rate')
 parser.add_argument('--prune-retrain-lr', '-prlr', default=0.0001, type=float,
