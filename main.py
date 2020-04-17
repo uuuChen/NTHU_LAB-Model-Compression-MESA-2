@@ -243,7 +243,7 @@ def quantize_process():
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before weight sharing\t{accuracy} ({accuracy5})")
 
     print('------------------------------- accuacy after weight sharing -------------------------------')
-    quan_labels_list = apply_weight_sharing(model, args.model_mode, args.device, args.bits)
+    quan_labels_list = apply_weight_sharing(model, args)
     accuracy, accuracy5 = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", accuracy, "initial", args)
     util.log(f"{args.save_dir}/{args.log}", f"accuracy after weight sharing {args.bits}bits\t{accuracy} ({accuracy5})")
