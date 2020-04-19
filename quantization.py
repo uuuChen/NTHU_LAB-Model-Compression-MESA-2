@@ -20,7 +20,7 @@ def apply_weight_sharing(model, args):
         elif len(ori_weights.shape) == 2 and args.model_mode != 'c':  # dense layer
             quan_range = 2 ** int(args.bits['fc'])
         else:
-            raise
+            raise Exception
         print(f'{name:20} | {str(param.size()):35} | => quantize to {quan_range} indice')
         nonzero_flat_weights = ori_weights[ori_weights != 0].reshape(-1, 1)
         nonzero_indice = np.where(ori_weights != 0)

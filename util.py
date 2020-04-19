@@ -27,7 +27,7 @@ def load_checkpoint(model, file, args):
         print(f"=> loaded checkpoint '{args.evaluate}'")
     else:
         print(f"=> no checkpoint found at '{file}'")
-        raise
+        raise Exception
     return model, best_prec1
 
 
@@ -128,7 +128,6 @@ def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
             loss = criterion(output, target_var)
             optimizer.zero_grad()
             loss.backward()
-            # k = 0
             for name, p in model.named_parameters():
                 if (args.model_mode == 'd' and 'conv' in name or
                         args.model_mode == 'c' and 'fc' in name or
@@ -137,7 +136,6 @@ def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
                         'bn' in name):
                     continue
                 quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
-                # quan_labels = quan_labels_list[k]
                 quan_labels = quan_names2labels[name]
                 tensor = p.data.cpu().numpy()
                 grad_tensor = p.grad.data.cpu().numpy()
@@ -150,7 +148,6 @@ def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
                 grad_tensor = grad_center_array[quan_labels]
                 grad_tensor = np.where(tensor == 0, 0, grad_tensor)
                 p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
-                # k += 1
             optimizer.step()
             output = output.float()
             loss = loss.float()
@@ -172,7 +169,6 @@ def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
 
         # evaluate on validation set
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
-        # model = save_masked_checkpoint(model, 'quantized_re', prec5, epoch, args)
         log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
         log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
@@ -186,7 +182,6 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
     topk_avg_meters = [AverageMeter() for _ in range(len(topk))]
 
     criterion = nn.CrossEntropyLoss().to(args.device)
-    penalty = nn.MSELoss(reduction='sum').to(args.device)
 
     model.eval()
     end = time.time()
@@ -264,32 +259,32 @@ def fc_penalty(model, device, penalty):
     for i in range(int(model.partition_size['fc1']) - 1):
         penalty_fc1 += penalty(
             model.fc1.weight[
-               i * model.block_row_size1: (i + 1) * model.block_row_size1: 1,
-               i * model.block_col_size1: (i + 1) * model.block_col_size1: 1
+               i * model.block_row_size1: (i+1) * model.block_row_size1: 1,
+               i * model.block_col_size1: (i+1) * model.block_col_size1: 1
             ],
             model.fc1.weight[
-                (i + 1) * model.block_row_size1: (i + 2) * model.block_row_size1: 1,
-                (i + 1) * model.block_col_size1: (i + 2) * model.block_col_size1: 1
+                (i+1) * model.block_row_size1: (i+2) * model.block_row_size1: 1,
+                (i+1) * model.block_col_size1: (i+2) * model.block_col_size1: 1
             ])
     for i in range(int(model.partition_size['fc2']) - 1):
         penalty_fc2 += penalty(
             model.fc2.weight[
-                i * model.block_row_size2: (i + 1) * model.block_row_size2: 1,
-                i * model.block_col_size2: (i + 1) * model.block_col_size2: 1
+                i * model.block_row_size2: (i+1) * model.block_row_size2: 1,
+                i * model.block_col_size2: (i+1) * model.block_col_size2: 1
             ],
             model.fc2.weight[
-                (i + 1)*model.block_row_size2: (i + 2)*model.block_row_size2: 1,
-                (i + 1)*model.block_col_size2: (i + 2)*model.block_col_size2: 1
+                (i+1)*model.block_row_size2: (i+2)*model.block_row_size2: 1,
+                (i+1)*model.block_col_size2: (i+2)*model.block_col_size2: 1
             ])
     for i in range(int(model.partition_size['fc3']) - 1):
         penalty_fc3 += penalty(
             model.fc3.weight[
-                i * model.block_row_size3: (i + 1) * model.block_row_size3: 1,
-                i * model.block_col_size3: (i + 1) * model.block_col_size3: 1
+                i * model.block_row_size3: (i+1) * model.block_row_size3: 1,
+                i * model.block_col_size3: (i+1) * model.block_col_size3: 1
             ],
             model.fc3.weight[
-                (i + 1) * model.block_row_size3: (i + 2) * model.block_row_size3: 1,
-                (i + 1) * model.block_col_size3: (i + 2) * model.block_col_size3: 1
+                (i+1) * model.block_row_size3: (i+2) * model.block_row_size3: 1,
+                (i+1) * model.block_col_size3: (i+2) * model.block_col_size3: 1
             ])
 
     penalty_fc1 = penalty_fc1 / (int(model.partition_size['fc1']) - 1)

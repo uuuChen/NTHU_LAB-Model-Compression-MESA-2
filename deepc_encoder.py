@@ -276,7 +276,8 @@ def huffman_encode_sparse2d(weight, name, directory):
     t2, d2 = huffman_encode(calc_index_diff(mat.indptr), name + f'_{form}_indptr', directory)
 
     # Print statistics
-    original = mat.data.nbytes + mat.indices.nbytes + mat.indptr.nbytes
+    # original = mat.data.nbytes + mat.indices.nbytes + mat.indptr.nbytes
+    original = mat.data.nbytes
     compressed = t0 + t1 + t2 + d0 + d1 + d2
 
     return original, compressed

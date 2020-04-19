@@ -360,7 +360,7 @@ def get_model(args):
             args.prune_rates = [0.50, 0.50, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 0.75, 0.75, 0.75, 0.75, 0.75]  # PFEC
             model = vgg16().to(args.device)
         else:
-            raise
+            raise Exception
     else:
         model = AlexNet_mask(args.partition, 100, mask_flag=True).to(args.device)
     if os.path.isfile(f"{args.load_model}"):

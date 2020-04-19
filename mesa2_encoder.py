@@ -30,10 +30,10 @@ def delta_encoding_conv4d(conv4d_arr, maxdistance):
     pruned_filter_indice = np.where(np.sum(conv4d_arr.reshape(conv4d_arr.shape[0], -1), axis=1) == 0)[0]
     left_filter_indice = np.array(list(set(range(conv4d_arr.shape[0])).difference(pruned_filter_indice)))
     conv4d_index = to_index(conv4d_arr)
-    left_filters_index = conv4d_index[left_filter_indice, :, :, :]
+    left_filters = conv4d_index[left_filter_indice, :, :, :]
     first_filter = prev_filter = None
     delta_filters = list()
-    for i, cur_filter in list(enumerate(left_filters_index)):
+    for i, cur_filter in list(enumerate(left_filters)):
         if i == 0:
             first_filter = cur_filter
         else:
@@ -83,8 +83,7 @@ def mesa2_huffman_encode_conv4d(conv4d_arr, maxdistance, directory):
 
 
 def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, maxdistance, directory):
-    fc2d_index = to_index(fc2d_arr)
-    first_block_arr, delta_blocks_arr = delta_encoding_fc2d(fc2d_index, partitionsize, maxdistance)
+    first_block_arr, delta_blocks_arr = delta_encoding_fc2d(fc2d_arr, partitionsize, maxdistance)
 
     # Encode
     t0, d0 = huffman_encode(first_block_arr, directory)
