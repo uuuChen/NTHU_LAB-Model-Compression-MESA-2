@@ -103,7 +103,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
     return model
 
 
-def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
+def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
     criterion = nn.CrossEntropyLoss().to(args.device)
     args.lr = args.quantize_retrain_lr
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
@@ -136,7 +136,7 @@ def quantized_retrain(model, args, quan_names2labels, train_loader, val_loader):
                         'bn' in name):
                     continue
                 quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
-                quan_labels = quan_names2labels[name]
+                quan_labels = quan_name2labels[name]
                 tensor = p.data.cpu().numpy()
                 grad_tensor = p.grad.data.cpu().numpy()
                 grad_center_array = list()

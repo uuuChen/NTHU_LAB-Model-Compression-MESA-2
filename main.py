@@ -260,8 +260,8 @@ def encoding_process():
     util.log(f"{args.save_dir}/{args.log}", f"accuracy before huffman encoding\t{accuracy} ({accuracy5})")
 
     print('------------------------------- encoding -------------------------------------------')
-    mesa2_huffman_encode_model(model, args)
-    # deepc_huffman_encode_model(model, args)
+    # mesa2_huffman_encode_model(model, args)
+    deepc_huffman_encode_model(model, args)
 
 
 def main():

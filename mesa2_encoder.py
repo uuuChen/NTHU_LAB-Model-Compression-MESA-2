@@ -3,7 +3,7 @@ from huffmancoding import huffman_encode
 import util
 
 
-def to_index(layer):
+def to_indice(layer):
     value_set = np.unique(layer)
     value2idx_dict = dict(zip(value_set, range(len(value_set))))
     return np.vectorize(value2idx_dict.get)(layer)
@@ -29,8 +29,8 @@ def matrix_cycledistance(array_x, array_y, maxdistance):
 def delta_encoding_conv4d(conv4d_arr, maxdistance):
     pruned_filter_indice = np.where(np.sum(conv4d_arr.reshape(conv4d_arr.shape[0], -1), axis=1) == 0)[0]
     left_filter_indice = np.array(list(set(range(conv4d_arr.shape[0])).difference(pruned_filter_indice)))
-    conv4d_index = to_index(conv4d_arr)
-    left_filters = conv4d_index[left_filter_indice, :, :, :]
+    conv4d_indice = to_indice(conv4d_arr)
+    left_filters = conv4d_indice[left_filter_indice, :, :, :]
     first_filter = prev_filter = None
     delta_filters = list()
     for i, cur_filter in list(enumerate(left_filters)):
@@ -46,17 +46,17 @@ def delta_encoding_conv4d(conv4d_arr, maxdistance):
 
 
 def delta_encoding_fc2d(fc2d_arr, partitionsize, maxdistance):
-    fc2d_index = to_index(fc2d_arr)
-    num_of_block_rows = fc2d_index.shape[0] // partitionsize
-    num_of_block_cols = fc2d_index.shape[1] // partitionsize
+    fc2d_indice = to_indice(fc2d_arr)
+    num_of_block_rows = fc2d_indice.shape[0] // partitionsize
+    num_of_block_cols = fc2d_indice.shape[1] // partitionsize
     delta_blocks = list()
     first_block = prev_block = None
     for i in range(partitionsize):
         if i == 0:
-            first_block = fc2d_index[:num_of_block_rows, :num_of_block_cols]
+            first_block = fc2d_indice[:num_of_block_rows, :num_of_block_cols]
             prev_block = first_block
         else:
-            cur_block = fc2d_index[
+            cur_block = fc2d_indice[
                 i*num_of_block_rows: (i+1)*num_of_block_rows,
                 i*num_of_block_cols: (i+1)*num_of_block_cols
             ]

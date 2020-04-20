@@ -229,8 +229,7 @@ def huffman_encode_conv4d(weight, name, directory):  # add
     t3, d3 = huffman_encode(len_arr, name + f'_{form}_length', directory)
 
     # Print statistics
-    # original = data_arr.nbytes + indices_arr.nbytes + indptr_arr.nbytes + len_arr.nbytes
-    original = data_arr.nbytes
+    original = data_arr.nbytes + indices_arr.nbytes + indptr_arr.nbytes + len_arr.nbytes
     compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
 
     return original, compressed
@@ -276,8 +275,7 @@ def huffman_encode_sparse2d(weight, name, directory):
     t2, d2 = huffman_encode(calc_index_diff(mat.indptr), name + f'_{form}_indptr', directory)
 
     # Print statistics
-    # original = mat.data.nbytes + mat.indices.nbytes + mat.indptr.nbytes
-    original = mat.data.nbytes
+    original = mat.data.nbytes + mat.indices.nbytes + mat.indptr.nbytes
     compressed = t0 + t1 + t2 + d0 + d1 + d2
 
     return original, compressed
