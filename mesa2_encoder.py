@@ -16,6 +16,10 @@ def cycledistance(a, b, maxdistance):
         return b - a + maxdistance
 
 
+def get_index_percentage(indice_arr, index):
+    return len(np.where(indice_arr == index)[0]) / len(indice_arr.reshape(-1)) * 100.
+
+
 def matrix_cycledistance(array_x, array_y, maxdistance):
     flat_list_x = list(array_x.reshape(-1))
     flat_list_y = list(array_y.reshape(-1))
@@ -42,6 +46,8 @@ def delta_encoding_conv4d(conv4d_arr, maxdistance):
     first_filter = first_filter.astype('float32')
     delta_filters = np.array(delta_filters).astype('float32')
     pruned_filter_indice = pruned_filter_indice.astype('int32')
+    for i in range(2 ** 5 + 1):
+        print(f'{i}: {get_index_percentage(left_filters, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
     return first_filter, delta_filters, pruned_filter_indice
 
 
@@ -64,6 +70,9 @@ def delta_encoding_fc2d(fc2d_arr, partitionsize, maxdistance):
             prev_block = cur_block
     first_block = first_block.astype('float32')
     delta_blocks = np.array(delta_blocks).astype('float32')
+    nonzero_indice = fc2d_indice[fc2d_arr != 0]
+    for i in range(2 ** 5 + 1):
+        print(f'{i}: {get_index_percentage(nonzero_indice, i) :.2f} % | {get_index_percentage(delta_blocks, i) :.2f} %')
     return first_block, delta_blocks
 
 

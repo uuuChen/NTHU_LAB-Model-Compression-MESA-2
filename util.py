@@ -247,51 +247,78 @@ def conv_penalty(model, device, penalty, mode):
                             module.weight[i, left_channel_indice[j+1], :, :]
                         )
                     penalty_filters += penalty_channels
-            # penalty_filters /= (num_of_left_filters - 1)
+            penalty_filters /= (num_of_left_filters - 1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     # penalty = torch.sum(torch.stack(penalty_layers))
+    print(penalty)
     return penalty.to(device)
 
 
 def fc_penalty(model, device, penalty):
-    penalty_fc1 = penalty_fc2 = penalty_fc3 = 0
-    for i in range(int(model.partition_size['fc1']) - 1):
-        penalty_fc1 += penalty(
-            model.fc1.weight[
-               i * model.block_row_size1: (i+1) * model.block_row_size1: 1,
-               i * model.block_col_size1: (i+1) * model.block_col_size1: 1
-            ],
-            model.fc1.weight[
-                (i+1) * model.block_row_size1: (i+2) * model.block_row_size1: 1,
-                (i+1) * model.block_col_size1: (i+2) * model.block_col_size1: 1
-            ])
-    for i in range(int(model.partition_size['fc2']) - 1):
-        penalty_fc2 += penalty(
-            model.fc2.weight[
-                i * model.block_row_size2: (i+1) * model.block_row_size2: 1,
-                i * model.block_col_size2: (i+1) * model.block_col_size2: 1
-            ],
-            model.fc2.weight[
-                (i+1)*model.block_row_size2: (i+2)*model.block_row_size2: 1,
-                (i+1)*model.block_col_size2: (i+2)*model.block_col_size2: 1
-            ])
-    for i in range(int(model.partition_size['fc3']) - 1):
-        penalty_fc3 += penalty(
-            model.fc3.weight[
-                i * model.block_row_size3: (i+1) * model.block_row_size3: 1,
-                i * model.block_col_size3: (i+1) * model.block_col_size3: 1
-            ],
-            model.fc3.weight[
-                (i+1) * model.block_row_size3: (i+2) * model.block_row_size3: 1,
-                (i+1) * model.block_col_size3: (i+2) * model.block_col_size3: 1
-            ])
-
-    penalty_fc1 = penalty_fc1 / (int(model.partition_size['fc1']) - 1)
-    penalty_fc2 = penalty_fc2 / (int(model.partition_size['fc2']) - 1)
-    penalty_fc3 = penalty_fc3 / (int(model.partition_size['fc3']) - 1)
-    penalty = 0.33 * (penalty_fc1 + penalty_fc2 + penalty_fc3)
+    penalty_layers = list()
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Linear):
+            penalty_blocks = 0
+            fc_data = module.weight.data.cpu().numpy()
+            num_of_partizions = int(model.partition_size[name])
+            for i in range(num_of_partizions - 1):
+                block_rows = fc_data.shape[0] // num_of_partizions
+                block_cols = fc_data.shape[1] // num_of_partizions
+                cur_block = module.weight[
+                    i * block_rows: (i+1) * block_rows,
+                    i * block_cols: (i+1) * block_cols,
+                ]
+                next_block = module.weight[
+                    (i+1) * block_rows: (i+2) * block_rows,
+                    (i+1) * block_cols: (i+2) * block_cols,
+                ]
+                penalty_blocks += penalty(cur_block, next_block)
+            penalty_blocks /= (num_of_partizions - 1)
+            penalty_layers.append(penalty_blocks)
+    penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
+
+
+# def fc_penalty(model, device, penalty):
+#     penalty_fc1 = penalty_fc2 = penalty_fc3 = 0
+#     for i in range(int(model.partition_size['fc1']) - 1):
+#         penalty_fc1 += penalty(
+#             model.fc1.weight[
+#                i * model.block_row_size1: (i+1) * model.block_row_size1: 1,
+#                i * model.block_col_size1: (i+1) * model.block_col_size1: 1
+#             ],
+#             model.fc1.weight[
+#                 (i+1) * model.block_row_size1: (i+2) * model.block_row_size1: 1,
+#                 (i+1) * model.block_col_size1: (i+2) * model.block_col_size1: 1
+#             ])
+#     for i in range(int(model.partition_size['fc2']) - 1):
+#         penalty_fc2 += penalty(
+#             model.fc2.weight[
+#                 i * model.block_row_size2: (i+1) * model.block_row_size2: 1,
+#                 i * model.block_col_size2: (i+1) * model.block_col_size2: 1
+#             ],
+#             model.fc2.weight[
+#                 (i+1)*model.block_row_size2: (i+2)*model.block_row_size2: 1,
+#                 (i+1)*model.block_col_size2: (i+2)*model.block_col_size2: 1
+#             ])
+#     for i in range(int(model.partition_size['fc3']) - 1):
+#         penalty_fc3 += penalty(
+#             model.fc3.weight[
+#                 i * model.block_row_size3: (i+1) * model.block_row_size3: 1,
+#                 i * model.block_col_size3: (i+1) * model.block_col_size3: 1
+#             ],
+#             model.fc3.weight[
+#                 (i+1) * model.block_row_size3: (i+2) * model.block_row_size3: 1,
+#                 (i+1) * model.block_col_size3: (i+2) * model.block_col_size3: 1
+#             ])
+#
+#     penalty_fc1 = penalty_fc1 / (int(model.partition_size['fc1']) - 1)
+#     penalty_fc2 = penalty_fc2 / (int(model.partition_size['fc2']) - 1)
+#     penalty_fc3 = penalty_fc3 / (int(model.partition_size['fc3']) - 1)
+#     penalty = 0.33 * (penalty_fc1 + penalty_fc2 + penalty_fc3)
+#     print(penalty)
+#     return penalty.to(device)
 
 
 def get_layers_penalty(model, penalty, args, tok):
