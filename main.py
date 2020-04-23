@@ -168,11 +168,6 @@ def environment_setting():
 
 def check_folders_exist():
     os.makedirs(f'{args.save_dir}', exist_ok=True)
-    # os.makedirs(f'{args.save_dir}/{args.out_oldweight_folder}', exist_ok=True)
-    # os.makedirs(f'{args.save_dir}/{args.out_pruned_folder}', exist_ok=True)
-    # os.makedirs(f'{args.save_dir}/{args.out_pruned_re_folder}', exist_ok=True)
-    # os.makedirs(f'{args.save_dir}/{args.out_quantized_folder}', exist_ok=True)
-    # os.makedirs(f'{args.save_dir}/{args.out_quantized_re_folder}', exist_ok=True)
 
 
 def run():

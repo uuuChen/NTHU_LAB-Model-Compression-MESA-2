@@ -1,6 +1,9 @@
 import numpy as np
-from huffmancoding import huffman_encode
 import util
+from collections import Counter
+
+from huffmancoding import huffman_encode
+
 
 
 def to_indice(layer):
@@ -46,8 +49,21 @@ def delta_encoding_conv4d(conv4d_arr, maxdistance):
     first_filter = first_filter.astype('float32')
     delta_filters = np.array(delta_filters).astype('float32')
     pruned_filter_indice = pruned_filter_indice.astype('int32')
+
+    # print quantized indice statistics
+    filter_shape = first_filter.shape
+    same_pos_same_indice_percentage = 0
+    for ch in range(filter_shape[0]):
+        for i in range(filter_shape[1]):
+            for j in range(filter_shape[2]):
+                filters_pos_indice = delta_filters[:, ch, i, j]
+                same_pos_same_indice_percentage += get_index_percentage(
+                    filters_pos_indice, int(Counter(filters_pos_indice).most_common(1)[0][0]))
+    same_pos_same_indice_percentage /= len(first_filter.reshape(-1))
+    print(f'percentage of same indice in same position of delta blocks: {same_pos_same_indice_percentage:.2f} %')
+    nonzero_indice = conv4d_indice[conv4d_arr != 0]
     for i in range(2 ** 5 + 1):
-        print(f'{i}: {get_index_percentage(left_filters, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
+        print(f'{i}: {get_index_percentage(nonzero_indice, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
     return first_filter, delta_filters, pruned_filter_indice
 
 
@@ -70,6 +86,17 @@ def delta_encoding_fc2d(fc2d_arr, partitionsize, maxdistance):
             prev_block = cur_block
     first_block = first_block.astype('float32')
     delta_blocks = np.array(delta_blocks).astype('float32')
+
+    # print quantized indice statistics
+    block_shape = first_block.shape
+    same_pos_same_indice_percentage = 0
+    for i in range(block_shape[0]):
+        for j in range(block_shape[1]):
+            blocks_pos_indice = delta_blocks[:, i, j]
+            same_pos_same_indice_percentage += get_index_percentage(
+                blocks_pos_indice, int(Counter(blocks_pos_indice).most_common(1)[0][0]))
+    same_pos_same_indice_percentage /= len(first_block.reshape(-1))
+    print(f'percentage of same indice in same position of delta blocks: {same_pos_same_indice_percentage:.2f} %')
     nonzero_indice = fc2d_indice[fc2d_arr != 0]
     for i in range(2 ** 5 + 1):
         print(f'{i}: {get_index_percentage(nonzero_indice, i) :.2f} % | {get_index_percentage(delta_blocks, i) :.2f} %')
@@ -154,6 +181,3 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
     util.log(f"{args.save_dir}/{args.log}", log_str)
     print('-' * 70)
     print(log_str)
-
-
-

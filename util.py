@@ -251,7 +251,6 @@ def conv_penalty(model, device, penalty, mode):
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     # penalty = torch.sum(torch.stack(penalty_layers))
-    print(penalty)
     return penalty.to(device)
 
 
