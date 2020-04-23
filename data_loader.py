@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
 
-def get_cifar100_dataSet(args):
+def get_cifar100_data_loader(args):
     normalize = transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR100(root='./data', train=True, transform=transforms.Compose([
@@ -28,7 +28,7 @@ def get_cifar100_dataSet(args):
     return train_loader, val_loader
 
 
-def get_imageNet_dataSet(args, data_dir):
+def get_imageNet_data_loader(args, data_dir):
     traindir = os.path.join(data_dir, 'train')
     valdir = os.path.join(data_dir, 'valid')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])

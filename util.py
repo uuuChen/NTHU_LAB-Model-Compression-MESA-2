@@ -275,7 +275,6 @@ def conv_position_mean_penalty(model, device, penalty, mode):
                         penalty_pos += penalty(same_pos_weights, weights_mean)
             penalty_layers.append(penalty_pos)
     penalty = torch.mean(torch.stack(penalty_layers))
-    print(penalty)
     return penalty.to(device)
 
 

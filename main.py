@@ -162,7 +162,7 @@ def environment_setting():
     check_folders_exist()
 
     # get data loader
-    train_loader, val_loader = data_loader.get_cifar100_dataSet(args)
+    train_loader, val_loader = data_loader.get_cifar100_data_loader(args)
 
     # get model
     model = models.get_model(args)
