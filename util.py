@@ -278,6 +278,29 @@ def conv_position_mean_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
+def conv_matrix2d_mean_penalty(model, device, penalty, mode):
+    if not ('filter' in mode or 'channel' in mode):
+        return 0.0
+    penalty_layers = list()
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+            if 'filter' in mode:
+                left_filter_indice = model.conv2leftIndiceDict[name]
+                left_filters = module.weight[left_filter_indice, :, :, :]
+            else:
+                left_channel_indice = model.conv2leftIndiceDict[name]
+                left_filters = module.weight[:, left_channel_indice, :, :]
+            penalty_matrix2d = 0
+            for kn in range(left_filters.shape[0]):
+                for ch in range(left_filters.shape[1]):
+                    matrix2d_weights = left_filters[kn, ch, :, :]
+                    weights_mean = torch.mean(matrix2d_weights)
+                    penalty_matrix2d += penalty(matrix2d_weights, weights_mean)
+            penalty_layers.append(penalty_matrix2d)
+    penalty = torch.mean(torch.stack(penalty_layers))
+    return penalty.to(device)
+
+
 def fc_penalty(model, device, penalty):
     penalty_layers = list()
     for name, module in model.named_modules():
@@ -313,6 +336,8 @@ def get_layers_penalty(model, penalty, args, tok):
             conv_penalty_ = conv_delta_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'position-mean':
             conv_penalty_ = conv_position_mean_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'matrix2d-mean':
+            conv_penalty_ = conv_matrix2d_mean_penalty(model, args.device, penalty, args.prune_mode)
         else:
             raise Exception
         all_penalty += args.beta * conv_penalty_

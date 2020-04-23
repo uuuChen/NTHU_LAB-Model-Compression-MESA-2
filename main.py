@@ -72,7 +72,7 @@ parser.add_argument('--beta', '-be', default=0.1, type=float, metavar='M',
 
 # ------------- conv loss function -------------------------------------------------
 parser.add_argument('--conv-loss-func', '-clf', type=str, default='delta',
-                    help='can be delta or position-mean (default delta)')
+                    help='can be delta or position-mean or matrix2d-mean (default delta)')
 
 # ---------- pruning rate for conv1, conv2, conv3, conv4, conv5 --------------------
 parser.add_argument('--prune-rates', "-pr", nargs='+', type=float,
