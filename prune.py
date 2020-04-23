@@ -11,8 +11,8 @@ from torch.nn.modules.utils import _pair
 class PruningModule(Module):
     def __init__(self):
         super(PruningModule, self).__init__()
-        self.conv2pruneIndiceDict = dict()
-        self.conv2leftIndiceDict = dict()
+        self.conv2pruneIndiceDict = None
+        self.conv2leftIndiceDict = None
 
     def prune_by_percentile(self, layerlist, q=5.0):
         """
@@ -162,19 +162,22 @@ class PruningModule(Module):
 
         return new_pruning_rates
 
-    def set_conv_prune_indice_dict(self, mode='filter-norm'):
-        pruned_indice = None
+    def set_conv_prune_indice_dict(self):
+        self.conv2pruneIndiceDict = dict()
+        self.conv2leftIndiceDict = dict()
         for name, module in self.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
                 conv_arr = module.weight.data.cpu().numpy()
-                if 'filter' in mode:
-                    pruned_indice = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
-                elif 'channel' in mode:
-                    perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
-                    pruned_indice = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
-                left_indice = list(set(range(conv_arr.shape[0])).difference(pruned_indice))
-                self.conv2pruneIndiceDict[name] = pruned_indice
-                self.conv2leftIndiceDict[name] = left_indice
+                perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
+
+                pruned_filter_indice = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
+                pruned_channel_indice = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
+
+                left_filter_indice = list(set(range(conv_arr.shape[0])).difference(pruned_filter_indice))
+                left_channel_indice = list(set(range(perm_conv_arr.shape[0])).difference(pruned_channel_indice))
+
+                self.conv2pruneIndiceDict[name] = (pruned_filter_indice, pruned_channel_indice)
+                self.conv2leftIndiceDict[name] = (left_filter_indice, left_channel_indice)
 
 
 class _ConvNd(Module):

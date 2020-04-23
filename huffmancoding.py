@@ -14,6 +14,9 @@ def huffman_encode(arr, save_dir='./'):
     The names of binary files are prefixed with prefix
     returns the number of bytes for the tree and the data after the compression
     """
+    if len(arr) == 0:
+        return 0, 0
+
     # Infer dtype
     dtype = str(arr.dtype)
 

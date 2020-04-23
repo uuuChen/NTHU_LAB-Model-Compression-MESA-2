@@ -225,32 +225,25 @@ def conv_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            conv_data = module.weight.data.cpu().numpy()
-            if 'filter' in mode:
-                left_filter_indice = model.conv2leftIndiceDict[name]
-            else:
-                left_filter_indice = list(range(conv_data.shape[0]))
-            num_of_left_filters = len(left_filter_indice)
+            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
             penalty_filters = 0
-            for i in range(num_of_left_filters - 1):
+            for i in range(left_conv_weights.shape[0] - 1):
                 if 'filter' in mode:
                     penalty_filters += penalty(
-                        module.weight[left_filter_indice[i], :, :, :],
-                        module.weight[left_filter_indice[i+1], :, :, :]
+                        left_conv_weights[i, :, :, :],
+                        left_conv_weights[i+1, :, :, :]
                     )
                 elif 'channel' in mode:
-                    left_channel_indice = model.conv2leftIndiceDict[name]
                     penalty_channels = 0
-                    for j in range(len(left_channel_indice) - 1):
+                    for j in range(left_conv_weights.shape[1] - 1):
                         penalty_channels += penalty(
-                            module.weight[i, left_channel_indice[j], :, :],
-                            module.weight[i, left_channel_indice[j+1], :, :]
+                            left_conv_weights[i, j, :, :],
+                            left_conv_weights[i, j+1, :, :]
                         )
                     penalty_filters += penalty_channels
-            penalty_filters /= (num_of_left_filters - 1)
+            penalty_filters /= (left_conv_weights.shape[0] - 1)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
-    # penalty = torch.sum(torch.stack(penalty_layers))
     return penalty.to(device)
 
 
@@ -260,17 +253,12 @@ def conv_position_mean_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            if 'filter' in mode:
-                left_filter_indice = model.conv2leftIndiceDict[name]
-                left_filters = module.weight[left_filter_indice, :, :, :]
-            else:
-                left_channel_indice = model.conv2leftIndiceDict[name]
-                left_filters = module.weight[:, left_channel_indice, :, :]
+            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
             penalty_pos = 0
-            for ch in range(left_filters.shape[1]):
-                for i in range(left_filters.shape[2]):
-                    for j in range(left_filters.shape[3]):
-                        same_pos_weights = left_filters[:, ch, i, j]
+            for ch in range(left_conv_weights.shape[1]):
+                for i in range(left_conv_weights.shape[2]):
+                    for j in range(left_conv_weights.shape[3]):
+                        same_pos_weights = left_conv_weights[:, ch, i, j]
                         weights_mean = torch.mean(same_pos_weights)
                         penalty_pos += penalty(same_pos_weights, weights_mean)
             penalty_layers.append(penalty_pos)
@@ -284,16 +272,11 @@ def conv_matrix2d_mean_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            if 'filter' in mode:
-                left_filter_indice = model.conv2leftIndiceDict[name]
-                left_filters = module.weight[left_filter_indice, :, :, :]
-            else:
-                left_channel_indice = model.conv2leftIndiceDict[name]
-                left_filters = module.weight[:, left_channel_indice, :, :]
+            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
             penalty_matrix2d = 0
-            for kn in range(left_filters.shape[0]):
-                for ch in range(left_filters.shape[1]):
-                    matrix2d_weights = left_filters[kn, ch, :, :]
+            for kn in range(left_conv_weights.shape[0]):
+                for ch in range(left_conv_weights.shape[1]):
+                    matrix2d_weights = left_conv_weights[kn, ch, :, :]
                     weights_mean = torch.mean(matrix2d_weights)
                     penalty_matrix2d += penalty(matrix2d_weights, weights_mean)
             penalty_layers.append(penalty_matrix2d)
@@ -443,6 +426,14 @@ def get_part_model_original_bytes(model, args):
                 'bias' in name):
             model_bytes += param.data.cpu().numpy().nbytes
     return model_bytes
+
+
+def get_unpruned_conv_weights(conv_arr, model, name):
+    if model.conv2leftIndiceDict is None:
+        model.set_conv_prune_indice_dict()
+    left_filter_indice, left_channel_indice = model.conv2leftIndiceDict[name]
+    unpruned_conv_weights = conv_arr[left_filter_indice, :, :, :][:, left_channel_indice, :, :]
+    return unpruned_conv_weights
 
 
 class AverageMeter(object):
