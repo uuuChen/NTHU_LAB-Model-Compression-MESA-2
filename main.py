@@ -70,6 +70,10 @@ parser.add_argument('--alpha', '-al', default=0.1, type=float, metavar='M',
 parser.add_argument('--beta', '-be', default=0.1, type=float, metavar='M',
                     help='beta(default=0.1)')
 
+# ------------- conv loss function -------------------------------------------------
+parser.add_argument('--conv-loss-func', '-clf', type=str, default='delta',
+                    help='can be delta or position-mean (default delta)')
+
 # ---------- pruning rate for conv1, conv2, conv3, conv4, conv5 --------------------
 parser.add_argument('--prune-rates', "-pr", nargs='+', type=float,
                     default=[0.16, 0.62, 0.65, 0.63, 0.63],
@@ -91,11 +95,11 @@ parser.add_argument('--log', type=str, default='log.txt',
                     help='log file name')
 
 # ---------- base dir --------------------------------------------------------------
-parser.add_argument('--save-dir', '-sd', type=str,default='model_default',
+parser.add_argument('--save-dir', '-sd', type=str, default='model_default',
                     help='model store path(defalut="model_default")')
 
 # ---------- load file -------------------------------------------------------------
-parser.add_argument('--load-model', '-lm', type=str,default='checkpoint_default.tar',
+parser.add_argument('--load-model', '-lm', type=str, default='checkpoint_default.tar',
                     help='load exist checkpoint file')
 
 # ---------- train process ------------------------------------------------------------

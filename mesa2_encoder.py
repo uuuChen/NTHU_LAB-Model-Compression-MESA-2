@@ -5,7 +5,6 @@ from collections import Counter
 from huffmancoding import huffman_encode
 
 
-
 def to_indice(layer):
     value_set = np.unique(layer)
     value2idx_dict = dict(zip(value_set, range(len(value_set))))

@@ -219,7 +219,7 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
     return topk_prec_avg
 
 
-def conv_penalty(model, device, penalty, mode):
+def conv_delta_penalty(model, device, penalty, mode):
     if not ('filter' in mode or 'channel' in mode):
         return 0.0
     penalty_layers = list()
@@ -254,6 +254,31 @@ def conv_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
+def conv_position_mean_penalty(model, device, penalty, mode):
+    if not ('filter' in mode or 'channel' in mode):
+        return 0.0
+    penalty_layers = list()
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+            if 'filter' in mode:
+                left_filter_indice = model.conv2leftIndiceDict[name]
+                left_filters = module.weight[left_filter_indice, :, :, :]
+            else:
+                left_channel_indice = model.conv2leftIndiceDict[name]
+                left_filters = module.weight[:, left_channel_indice, :, :]
+            penalty_pos = 0
+            for ch in range(left_filters.shape[1]):
+                for i in range(left_filters.shape[2]):
+                    for j in range(left_filters.shape[3]):
+                        same_pos_weights = left_filters[:, ch, i, j]
+                        weights_mean = torch.mean(same_pos_weights)
+                        penalty_pos += penalty(same_pos_weights, weights_mean)
+            penalty_layers.append(penalty_pos)
+    penalty = torch.mean(torch.stack(penalty_layers))
+    print(penalty)
+    return penalty.to(device)
+
+
 def fc_penalty(model, device, penalty):
     penalty_layers = list()
     for name, module in model.named_modules():
@@ -279,54 +304,18 @@ def fc_penalty(model, device, penalty):
     return penalty.to(device)
 
 
-# def fc_penalty(model, device, penalty):
-#     penalty_fc1 = penalty_fc2 = penalty_fc3 = 0
-#     for i in range(int(model.partition_size['fc1']) - 1):
-#         penalty_fc1 += penalty(
-#             model.fc1.weight[
-#                i * model.block_row_size1: (i+1) * model.block_row_size1: 1,
-#                i * model.block_col_size1: (i+1) * model.block_col_size1: 1
-#             ],
-#             model.fc1.weight[
-#                 (i+1) * model.block_row_size1: (i+2) * model.block_row_size1: 1,
-#                 (i+1) * model.block_col_size1: (i+2) * model.block_col_size1: 1
-#             ])
-#     for i in range(int(model.partition_size['fc2']) - 1):
-#         penalty_fc2 += penalty(
-#             model.fc2.weight[
-#                 i * model.block_row_size2: (i+1) * model.block_row_size2: 1,
-#                 i * model.block_col_size2: (i+1) * model.block_col_size2: 1
-#             ],
-#             model.fc2.weight[
-#                 (i+1)*model.block_row_size2: (i+2)*model.block_row_size2: 1,
-#                 (i+1)*model.block_col_size2: (i+2)*model.block_col_size2: 1
-#             ])
-#     for i in range(int(model.partition_size['fc3']) - 1):
-#         penalty_fc3 += penalty(
-#             model.fc3.weight[
-#                 i * model.block_row_size3: (i+1) * model.block_row_size3: 1,
-#                 i * model.block_col_size3: (i+1) * model.block_col_size3: 1
-#             ],
-#             model.fc3.weight[
-#                 (i+1) * model.block_row_size3: (i+2) * model.block_row_size3: 1,
-#                 (i+1) * model.block_col_size3: (i+2) * model.block_col_size3: 1
-#             ])
-#
-#     penalty_fc1 = penalty_fc1 / (int(model.partition_size['fc1']) - 1)
-#     penalty_fc2 = penalty_fc2 / (int(model.partition_size['fc2']) - 1)
-#     penalty_fc3 = penalty_fc3 / (int(model.partition_size['fc3']) - 1)
-#     penalty = 0.33 * (penalty_fc1 + penalty_fc2 + penalty_fc3)
-#     print(penalty)
-#     return penalty.to(device)
-
-
 def get_layers_penalty(model, penalty, args, tok):
     all_penalty = fc_penalty_ = conv_penalty_ = 0.0
     if args.model_mode != 'c' and args.alpha != 0:
         fc_penalty_ = fc_penalty(model, args.device, penalty)
         all_penalty += args.alpha * fc_penalty_
     if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
-        conv_penalty_ = conv_penalty(model, args.device, penalty, args.prune_mode)
+        if args.conv_loss_func == 'delta':
+            conv_penalty_ = conv_delta_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'position-mean':
+            conv_penalty_ = conv_position_mean_penalty(model, args.device, penalty, args.prune_mode)
+        else:
+            raise Exception
         all_penalty += args.beta * conv_penalty_
     return all_penalty, fc_penalty_, conv_penalty_
 
