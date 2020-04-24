@@ -90,6 +90,10 @@ parser.add_argument('--bits', '-b',
                     action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...",
                     help='partition size of fc layer (eg. conv=8,fc=5)')
 
+# ---------- delta encoding ------------------------------------------------------
+parser.add_argument('--conv-delta-encoding', '-cde', dest='conv_delta_encoding', action='store_true',
+                    help='use delta encoding on conv or not')
+
 # ---------- log file --------------------------------------------------------------
 parser.add_argument('--log', type=str, default='log.txt',
                     help='log file name')

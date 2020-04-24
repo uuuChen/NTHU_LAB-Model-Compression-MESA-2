@@ -32,7 +32,7 @@ def matrix_cycledistance(array_x, array_y, maxdistance):
     return distancearray
 
 
-def delta_encoding_conv4d(conv4d_indice, maxdistance):
+def delta_encoding_conv4d(conv4d_indice, args, maxdistance):
     first_filter = prev_filter = None
     delta_filters = list()
     for i, cur_filter in list(enumerate(conv4d_indice)):
@@ -54,7 +54,7 @@ def delta_encoding_conv4d(conv4d_indice, maxdistance):
                     filters_pos_indice, int(Counter(filters_pos_indice).most_common(1)[0][0]))
     same_pos_same_indice_percentage /= len(first_filter.reshape(-1))
     print(f'percentage of same indice in same position of delta blocks: {same_pos_same_indice_percentage:.2f} %')
-    for i in range(2 ** 5 + 1):
+    for i in range(2 ** int(args.bits['conv']) + 1):
         print(f'{i}: {get_index_percentage(conv4d_indice, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
     return first_filter, delta_filters
 
@@ -94,23 +94,34 @@ def delta_encoding_fc2d(fc2d_indice, fc2d_arr, partitionsize, maxdistance):
     return first_block, delta_blocks
 
 
-def mesa2_huffman_encode_conv4d(model, name, conv4d_arr, maxdistance, directory):
+def mesa2_huffman_encode_conv4d(model, name, args, conv4d_arr, maxdistance, directory):
     if model.conv2pruneIndiceDict is None:
         model.set_conv_prune_indice_dict()
     pruned_filter_indice, pruned_channel_indice = model.conv2pruneIndiceDict[name]
     unpruned_conv_indice = util.get_unpruned_conv_weights(to_indice(conv4d_arr), model, name)
-    first_filter_arr, delta_filters_arr = delta_encoding_conv4d(unpruned_conv_indice, maxdistance)
 
-    # Encode
-    t0, d0 = huffman_encode(first_filter_arr.astype('float32'), directory)
-    t1, d1 = huffman_encode(delta_filters_arr.astype('float32'), directory)
-    t2, d2 = huffman_encode(pruned_filter_indice.astype('int32'), directory)
-    t3, d3 = huffman_encode(pruned_channel_indice.astype('int32'), directory)
+    if args.conv_delta_encoding:
+        first_filter_arr, delta_filters_arr = delta_encoding_conv4d(unpruned_conv_indice, args, maxdistance)
 
-    # Print statistics
-    original = (first_filter_arr.nbytes + delta_filters_arr.nbytes + pruned_filter_indice.nbytes +
-                pruned_channel_indice.nbytes)
-    compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
+        # Encode
+        t0, d0 = huffman_encode(first_filter_arr.astype('float32'), directory)
+        t1, d1 = huffman_encode(delta_filters_arr.astype('float32'), directory)
+        t2, d2 = huffman_encode(pruned_filter_indice.astype('int32'), directory)
+        t3, d3 = huffman_encode(pruned_channel_indice.astype('int32'), directory)
+
+        # Print statistics
+        original = (first_filter_arr.nbytes + delta_filters_arr.nbytes + pruned_filter_indice.nbytes +
+                    pruned_channel_indice.nbytes)
+        compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
+    else:
+        # Encode
+        t0, d0 = huffman_encode(unpruned_conv_indice.astype('float32'), directory)
+        t1, d1 = huffman_encode(pruned_filter_indice.astype('int32'), directory)
+        t2, d2 = huffman_encode(pruned_channel_indice.astype('int32'), directory)
+
+        # Print statistics
+        original = unpruned_conv_indice.nbytes + pruned_filter_indice.nbytes + pruned_channel_indice.nbytes
+        compressed = t0 + t1 + t2 + d0 + d1 + d2
 
     return original, compressed
 
@@ -142,7 +153,7 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
             weight = param.data.cpu().numpy()
             if 'conv' in name and args.model_mode != 'd':
                 original, compressed = mesa2_huffman_encode_conv4d(
-                    model, name.split('.')[0], weight, 2**int(args.bits['conv']), directory)
+                    model, name.split('.')[0], args, weight, 2**int(args.bits['conv']), directory)
             elif 'fc' in name and args.model_mode != 'c':
                 original, compressed = mesa2_huffman_encode_fc2d(
                     weight, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
