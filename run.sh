@@ -19,6 +19,8 @@ python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 1.0
 python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 2.0 -sd model_mesa_2.0_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -reep 200
 # norm-base, position mean loss
 python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 0.1 -clf position-mean -sd model_mesa_posMean_0.1_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -reep 200
+# norm-base, matrix1d delta loss
+python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 0.1 -clf matrix1d-delta -sd model_mesa_mtx1dDelta_0.1_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -reep 200
 # geometric median, delta loss
 python main.py -mm c -initp -prunep -quanp -encp -b conv=5,fc=5 -pm filter-gm -be 0.0 -sd model_mesa_0.0_filter_gm_conv
 python main.py -mm c -initp -prunep -quanp -encp -b conv=5,fc=5 -pm filter-gm -be 1.0 -sd model_mesa_1.0_filter_gm_conv

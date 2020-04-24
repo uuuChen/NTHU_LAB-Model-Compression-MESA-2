@@ -41,7 +41,6 @@ def delta_encoding_conv4d(conv4d_indice, maxdistance):
         else:
             delta_filters.append(matrix_cycledistance(prev_filter, cur_filter, maxdistance))
         prev_filter = cur_filter
-    first_filter = first_filter
     delta_filters = np.array(delta_filters)
 
     # print quantized indice statistics
@@ -96,6 +95,8 @@ def delta_encoding_fc2d(fc2d_indice, fc2d_arr, partitionsize, maxdistance):
 
 
 def mesa2_huffman_encode_conv4d(model, name, conv4d_arr, maxdistance, directory):
+    if model.conv2pruneIndiceDict is None:
+        model.set_conv_prune_indice_dict()
     pruned_filter_indice, pruned_channel_indice = model.conv2pruneIndiceDict[name]
     unpruned_conv_indice = util.get_unpruned_conv_weights(to_indice(conv4d_arr), model, name)
     first_filter_arr, delta_filters_arr = delta_encoding_conv4d(unpruned_conv_indice, maxdistance)
@@ -129,8 +130,6 @@ def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, maxdistance, directory):
 
 
 def mesa2_huffman_encode_model(model, args, directory='encodings/'):
-    if model.conv2pruneIndiceDict is None:
-        model.set_conv_prune_indice_dict()
     original_total = compressed_total = 0  # the unit is bytes
     print(f"{'Layer':<15} | {'original':>10} {'compressed':>10} {'improvement':>11} {'percent':>7}")
     print('-' * 70)

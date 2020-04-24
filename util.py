@@ -172,7 +172,6 @@ def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
         log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
         log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
         log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
-
     return model
 
 
@@ -284,6 +283,20 @@ def conv_matrix2d_mean_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
+def conv_matrix1d_delta_penalty(model, device, penalty, mode):
+    if not ('filter' in mode or 'channel' in mode):
+        return 0.0
+    penalty_layers = list()
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
+            matrix1ds_tensor = left_conv_weights.reshape(-1, left_conv_weights.shape[3])
+            penalty_matrix1d = penalty(matrix1ds_tensor[:, :-1], matrix1ds_tensor[:, 1:])
+            penalty_layers.append(penalty_matrix1d)
+    penalty = torch.mean(torch.stack(penalty_layers))
+    return penalty.to(device)
+
+
 def fc_penalty(model, device, penalty):
     penalty_layers = list()
     for name, module in model.named_modules():
@@ -317,6 +330,8 @@ def get_layers_penalty(model, penalty, args, tok):
     if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
         if args.conv_loss_func == 'delta':
             conv_penalty_ = conv_delta_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'matrix1d-delta':
+            conv_penalty_ = conv_matrix1d_delta_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'position-mean':
             conv_penalty_ = conv_position_mean_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'matrix2d-mean':
@@ -428,11 +443,11 @@ def get_part_model_original_bytes(model, args):
     return model_bytes
 
 
-def get_unpruned_conv_weights(conv_arr, model, name):
+def get_unpruned_conv_weights(conv_weights, model, name):
     if model.conv2leftIndiceDict is None:
         model.set_conv_prune_indice_dict()
     left_filter_indice, left_channel_indice = model.conv2leftIndiceDict[name]
-    unpruned_conv_weights = conv_arr[left_filter_indice, :, :, :][:, left_channel_indice, :, :]
+    unpruned_conv_weights = conv_weights[left_filter_indice, :, :, :][:, left_channel_indice, :, :]
     return unpruned_conv_weights
 
 
