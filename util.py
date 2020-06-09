@@ -451,10 +451,10 @@ def get_part_model_original_bytes(model, args):
 
 
 def get_unpruned_conv_weights(conv_weights, model, name):
-    if model.conv2leftIndiceDict is None:
-        model.set_conv_prune_indice_dict()
-    left_filter_indice, left_channel_indice = model.conv2leftIndiceDict[name]
-    unpruned_conv_weights = conv_weights[left_filter_indice, :, :, :][:, left_channel_indice, :, :]
+    if model.conv2leftIndicesDict is None:
+        model.set_conv_prune_indices_dict()
+    left_filter_indices, left_channel_indices = model.conv2leftIndicesDict[name]
+    unpruned_conv_weights = conv_weights[left_filter_indices, :, :, :][:, left_channel_indices, :, :]
     return unpruned_conv_weights
 
 

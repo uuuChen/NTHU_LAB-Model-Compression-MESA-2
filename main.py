@@ -156,7 +156,7 @@ def pruning_process():
             if 'filter' in args.prune_mode:
                 prune_rates = model.get_conv_actual_prune_rates(args.prune_rates, print_log=True)
             model.prune_step(prune_rates, mode=args.prune_mode)
-        model.set_conv_prune_indice_dict()
+        model.set_conv_prune_indices_dict()
 
     util.topic_log("After prune CNN")
     util.print_nonzeros(model, args.log_file_path)
