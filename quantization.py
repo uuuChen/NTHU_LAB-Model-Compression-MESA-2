@@ -21,7 +21,7 @@ def apply_weight_sharing(model, args):
             quan_range = 2 ** int(args.bits['fc'])
         else:
             raise Exception
-        print(f'{name:20} | {str(param.size()):35} | => quantize to {quan_range} indice')
+        print(f'{name:20} | {str(param.size()):35} | => quantize to {quan_range} indices')
         nonzero_flat_weights = ori_weights[ori_weights != 0].reshape(-1, 1)
         nonzero_indice = np.where(ori_weights != 0)
         space = np.linspace(np.min(nonzero_flat_weights), np.max(nonzero_flat_weights), num=quan_range).reshape(-1, 1)

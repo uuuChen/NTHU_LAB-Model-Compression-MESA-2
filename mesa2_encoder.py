@@ -172,21 +172,18 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
         if ignore:
             log_str = f"{name:<15} | {'* pass':>10}"
             print(log_str)
-            util.log(f"{args.save_dir}/{args.log}", log_str)
+            util.log(args.log_file_path, log_str)
         else:
             original_total += original
             compressed_total += compressed
-            log_str = (f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x " 
-                       f"{100 * compressed / original:>6.2f}%")
+            log_str = f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x {100 * compressed / original:>6.2f}%"
             print(log_str)
-            util.log(f"{args.save_dir}/{args.log}", log_str)
+            util.log(args.log_file_path, log_str)
 
     # Print and log statistics
     part_model_original_bytes = util.get_part_model_original_bytes(model, args)
-    log_str = (f'\ncompression rate (without pruned params): {original_total} / {compressed_total} '
-               f'({ original_total / compressed_total:.3f} X) \n' 
-               f'compression rate (include pruned params): { part_model_original_bytes} / {compressed_total} '
-               f'({ part_model_original_bytes / compressed_total:.3f} X)')
-    util.log(f"{args.save_dir}/{args.log}", log_str)
+    log_str = (f'\ncompression rate (without pruned params): {original_total} / {compressed_total} ({ original_total / compressed_total:.3f} X) \n' 
+               f'compression rate (include pruned params): { part_model_original_bytes} / {compressed_total} ({ part_model_original_bytes / compressed_total:.3f} X)')
+    util.log(args.log_file_path, log_str)
     print('-' * 70)
     print(log_str)

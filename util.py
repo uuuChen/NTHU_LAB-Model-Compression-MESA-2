@@ -14,6 +14,13 @@ def log(filename, content):
         f.write(content)
 
 
+def topic_log(topic_str, length=100):
+    num_of_dash = length - (len(topic_str) + 2)
+    left_num_of_dash = num_of_dash // 2
+    right_num_of_dash = num_of_dash - left_num_of_dash
+    print('\n\n' + '-' * left_num_of_dash + " " + topic_str + " " + '-' * right_num_of_dash)
+
+
 def save_checkpoint(state, file_path='checkpoint.pth.tar'):
     torch.save(state, file_path)
 
@@ -59,14 +66,10 @@ def print_nonzeros(model, log_file):
         total_params = np.prod(tensor.shape)
         nonzero += nz_count
         total += total_params
-        log(log_file, f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%)'
-                      f' | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
-        print(f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | '
-              f'total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
-    log(log_file, f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : '
-                  f'{total/nonzero:10.2f}x  ({100 * (total-nonzero) / total:6.2f}% pruned)')
-    print(f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : {total/nonzero:10.2f}x '
-          f' ({100 * (total-nonzero) / total:6.2f}% pruned)')
+        log(log_file, f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
+        print(f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
+    log(log_file, f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : {total/nonzero:10.2f}x  ({100 * (total-nonzero) / total:6.2f}% pruned)')
+    print(f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : {total/nonzero:10.2f}x ({100 * (total-nonzero) / total:6.2f}% pruned)')
 
 
 def initial_train(model, args, train_loader, val_loader, tok):
@@ -76,7 +79,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
         epochs = args.epochs
         args.lr = args.train_lr
     else:  # tok == 'prune_retrain'
-        epochs = args.reepochs
+        epochs = args.prune_retrain_epochs
         args.lr = args.prune_retrain_lr
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     print(f'start epoch {args.start_epoch} / end epoch {epochs}')
@@ -89,8 +92,8 @@ def initial_train(model, args, train_loader, val_loader, tok):
         # record best prec1 and save checkpoint
         if best_prec1 < prec1 or tok == "prune_retrain":
             model = save_masked_checkpoint(model, tok, best_prec1, epoch, args)
-            log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
-            log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1} ({prec5})")
+            log(args.log_file_path, f"[epoch {epoch}]")
+            log(args.log_file_path, f"initial_accuracy\t{prec1} ({prec5})")
             best_prec1 = prec1
 
         #  if prune mode is "filter-gm" and during initial_train, then soft prune
@@ -169,9 +172,9 @@ def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
 
         # evaluate on validation set
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
-        log(f"{args.save_dir}/{args.log}", f"[epoch {epoch}]")
-        log(f"{args.save_dir}/{args.log}", f"initial_accuracy\t{prec1}")
-        log(f"{args.save_dir}/{args.log}", f"initial_top5_accuracy\t{prec5}")
+        log(args.log_file_path, f"[epoch {epoch}]")
+        log(args.log_file_path, f"initial_accuracy\t{prec1}")
+        log(args.log_file_path, f"initial_top5_accuracy\t{prec5}")
     return model
 
 
