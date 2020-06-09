@@ -104,9 +104,9 @@ def mask(in_weight, out_weight, partition_size):
     return row, col, row_permu, col_permu, torch.from_numpy(real_binary_mask)
 
 
-class AlexNet_mask(PruningModule):
+class AlexNetMask(PruningModule):
     def __init__(self, partitions, num_of_class=100, mask_flag=False):
-        super(AlexNet_mask, self).__init__()
+        super(AlexNetMask, self).__init__()
         conv2d = MaskedConv2d if mask_flag else nn.Conv2d
         self.partition_size = partitions
 
@@ -362,7 +362,7 @@ def get_model(args):
         else:
             raise Exception
     else:
-        model = AlexNet_mask(args.partition, 100, mask_flag=True).to(args.device)
+        model = AlexNetMask(args.partition, 100, mask_flag=True).to(args.device)
     if os.path.isfile(f"{args.load_model}"):
         model, args.best_prec1 = util.load_checkpoint(model, f"{args.load_model}", args)
         print("-------load " + f"{args.load_model} ({args.best_prec1:.3f})----")

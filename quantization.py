@@ -2,15 +2,13 @@ import torch
 import numpy as np
 from sklearn.cluster import KMeans
 
+import util
+
 
 def apply_weight_sharing(model, args):
     quan_name2labels = dict()
     for name, param in model.named_parameters():
-        if (args.model_mode == 'd' and 'conv' in name or
-                args.model_mode == 'c' and 'fc' in name or
-                'mask' in name or
-                'bias' in name or
-                'bn' in name):
+        if util.be_ignored(name, args.model_mode):
             print(f'{name:20} | {str(param.size()):35} | => pass')
             continue
 

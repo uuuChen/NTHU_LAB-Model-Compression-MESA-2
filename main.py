@@ -97,6 +97,7 @@ def environ_setting():
     print(f'Method | {args.method_str}')
     args.best_prec1 = 0.0
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
+
     # others setting
     if args.use_cuda:
         print("Using CUDA!")

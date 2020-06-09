@@ -1,3 +1,4 @@
+# System
 import os
 import torch
 import time
@@ -5,6 +6,9 @@ import numpy as np
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
+from torch.autograd import Variable
+
+# Custom
 from prune import MaskedConv2d
 
 
@@ -56,6 +60,17 @@ def print_model_parameters(model, with_values=False):
             print(param)
 
 
+def be_ignored(layer_name, model_mode):
+    if (model_mode == 'd' and 'conv' in layer_name or
+            model_mode == 'c' and 'fc' in layer_name or
+            'mask' in layer_name or
+            'bias' in layer_name or
+            'bn' in layer_name):
+        return True
+    else:
+        return False
+
+
 def print_nonzeros(model, log_file):
     nonzero = total = 0
     for name, p in model.named_parameters():
@@ -73,28 +88,27 @@ def print_nonzeros(model, log_file):
 
 
 def initial_train(model, args, train_loader, val_loader, tok):
-    best_prec1 = 0.0
     cudnn.benchmark = True if args.use_cuda else False
     if tok == 'initial_train':
         epochs = args.epochs
-        args.lr = args.train_lr
-    else:  # tok == 'prune_retrain'
+        lr = args.train_lr
+    else:  # for prune retrain
         epochs = args.prune_retrain_epochs
-        args.lr = args.prune_retrain_lr
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        lr = args.prune_retrain_lr
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
     print(f'start epoch {args.start_epoch} / end epoch {epochs}')
     for epoch in range(args.start_epoch, epochs):
         print(f'\nin epoch {epoch}')
-        optimizer = adjust_learning_rate(optimizer, epoch, args)
+        optimizer = adjust_learning_rate(optimizer, epoch, args, lr)
         train(train_loader, model, optimizer, epoch, args, tok)  # train for one epoch
         prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))  # evaluate on validation set
 
         # record best prec1 and save checkpoint
-        if best_prec1 < prec1 or tok == "prune_retrain":
-            model = save_masked_checkpoint(model, tok, best_prec1, epoch, args)
+        if args.best_prec1 < prec1 or tok == "prune_retrain":
+            model = save_masked_checkpoint(model, tok, prec1, epoch, args)
             log(args.log_file_path, f"[epoch {epoch}]")
             log(args.log_file_path, f"initial_accuracy\t{prec1} ({prec5})")
-            best_prec1 = prec1
+            args.best_prec1 = prec1
 
         #  if prune mode is "filter-gm" and during initial_train, then soft prune
         if args.model_mode != 'd' and args.prune_mode == 'filter-gm' and tok == "initial":
@@ -102,95 +116,83 @@ def initial_train(model, args, train_loader, val_loader, tok):
                 prune_rates = model.get_conv_actual_prune_rates(args.prune_rates)
                 model.prune_step(prune_rates, mode=args.prune_mode)
 
-    model = save_masked_checkpoint(model, tok, best_prec1, epochs, args)
+    model = save_masked_checkpoint(model, tok, args.best_prec1, epochs, args)
     return model
 
 
-def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
+def train(train_loader, model, optimizer, epoch, args, tok=""):
+    """ Train one epoch. """
+    batch_times = AverageMeter()
+    data_times = AverageMeter()
+    losses = AverageMeter()
+    top1s = AverageMeter()
+    all_penalties = AverageMeter()
+    fc_penalties = AverageMeter()
+    conv_penalties = AverageMeter()
     criterion = nn.CrossEntropyLoss().to(args.device)
-    args.lr = args.quantize_retrain_lr
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    for epoch in range(args.qauntize_epochs):
-        batch_times = AverageMeter()
-        data_times = AverageMeter()
-        losses = AverageMeter()
-        top1s = AverageMeter()
-        model.train()
-        end = time.time()
-        optimizer = adjust_learning_rate(optimizer, epoch, args)
+    penalty = nn.MSELoss(reduction='sum').to(args.device)
+    model.train()
+    end = time.time()
+    for i, (input, target) in enumerate(train_loader):
+        data_times.update(time.time() - end)  # measure data loading time
 
-        # train for one epoch
-        for i, (input, target) in enumerate(train_loader):
-            data_times.update(time.time() - end)
-            target = target.to(args.device)
-            input_var = torch.autograd.Variable(input).to(args.device)
-            target_var = torch.autograd.Variable(target).to(args.device)
+        target = target.to(args.device)
+        input_var = Variable(input).to(args.device)
+        target_var = Variable(target).to(args.device)
 
-            # compute output and update, and let nodes quantized in the same label have the same average gradient
-            output = model(input_var)
-            loss = criterion(output, target_var)
-            optimizer.zero_grad()
-            loss.backward()
+        # compute output and loss
+        output = model(input_var)
+        all_penalty, fc_penalty_, conv_penalty_ = get_layers_penalty(model, penalty, args, tok)
+        loss = criterion(output, target_var) + all_penalty
+        all_penalties.update(all_penalty)
+        fc_penalties.update(fc_penalty_)
+        conv_penalties.update(conv_penalty_)
+
+        # compute gradient and update
+        optimizer.zero_grad()
+        loss.backward()
+        if tok == "prune_retrain":  # let the gradient of the pruned node become 0
             for name, p in model.named_parameters():
-                if (args.model_mode == 'd' and 'conv' in name or
-                        args.model_mode == 'c' and 'fc' in name or
-                        'mask' in name or
-                        'bias' in name or
-                        'bn' in name):
+                if be_ignored(name, args.model_mode):
                     continue
-                quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
-                quan_labels = quan_name2labels[name]
-                tensor = p.data.cpu().numpy()
-                grad_tensor = p.grad.data.cpu().numpy()
-                grad_center_array = list()
-                for j in range(quan_bits):
-                    grad_by_index = grad_tensor[quan_labels == j]
-                    grad_center = np.mean(grad_by_index)
-                    grad_center_array.append(grad_center)
-                grad_center_array = np.array(grad_center_array)
-                grad_tensor = grad_center_array[quan_labels]
-                grad_tensor = np.where(tensor == 0, 0, grad_tensor)
-                p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
-            optimizer.step()
-            output = output.float()
-            loss = loss.float()
+                tensor_arr = p.data.cpu().numpy()
+                grad_tensor_arr = p.grad.data.cpu().numpy()
+                grad_tensor_arr = np.where(tensor_arr == 0, 0, grad_tensor_arr)
+                p.grad.data = torch.from_numpy(grad_tensor_arr).to(args.device)
+        optimizer.step()
+        output = output.float()
+        loss = loss.float()
 
-            # measure accuracy and record loss
-            prec1 = accuracy(output.data, target, topk=(1,))[0]
-            losses.update(loss.item(), input.size(0))
-            top1s.update(prec1, input.size(0))
+        # measure accuracy and record loss
+        prec1 = accuracy(output.data, target, topk=(1,))[0]
+        losses.update(loss.item(), input.size(0))
+        top1s.update(prec1, input.size(0))
 
-            # measure elapsed time
-            batch_times.update(time.time() - end)
-            end = time.time()
-            if i % args.print_freq == 0:
-                print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
-                      f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
-                      f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
-                      f'Loss {losses.val:.4f} ({losses.avg:.4f})\t'
-                      f'Prec {top1s.val:.3f} ({top1s.avg:.3f})')
+        # measure elapsed time
+        batch_times.update(time.time() - end)
+        end = time.time()
 
-        # evaluate on validation set
-        prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
-        log(args.log_file_path, f"[epoch {epoch}]")
-        log(args.log_file_path, f"initial_accuracy\t{prec1}")
-        log(args.log_file_path, f"initial_top5_accuracy\t{prec5}")
-    return model
+        # print log
+        if i % args.print_freq == 0:
+            print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
+                  f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
+                  f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
+                  f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
+                  f'Prec {top1s.val:.3f} ({top1s.avg:.3f})\t'
+                  f'Layer penalty {all_penalties.avg:.3f} ( fc: {fc_penalties.avg:.3f} , conv: {conv_penalties.avg:.3f} )')
 
 
 def validate(val_loader, model, args, topk=(1,), tok=''):
     batch_times = AverageMeter()
     losses = AverageMeter()
     topk_avg_meters = [AverageMeter() for _ in range(len(topk))]
-
     criterion = nn.CrossEntropyLoss().to(args.device)
-
     model.eval()
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
         target = target.to(args.device)
-        input_var = torch.autograd.Variable(input).to(args.device)
-        target_var = torch.autograd.Variable(target).to(args.device)
+        input_var = Variable(input).to(args.device)
+        target_var = Variable(target).to(args.device)
 
         # compute output
         output = model(input_var)
@@ -219,6 +221,74 @@ def validate(val_loader, model, args, topk=(1,), tok=''):
     prec_str = "  ".join([f'Prec {topk[i]} ({topk_prec_avg[i]:.3f})' for i in range(len(topk))])
     print(f' * {prec_str}\n')
     return topk_prec_avg
+
+
+def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
+    criterion = nn.CrossEntropyLoss().to(args.device)
+    lr = args.quantize_retrain_lr
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    for epoch in range(args.qauntize_epochs):
+        batch_times = AverageMeter()
+        data_times = AverageMeter()
+        losses = AverageMeter()
+        top1s = AverageMeter()
+        model.train()
+        end = time.time()
+        optimizer = adjust_learning_rate(optimizer, epoch, args, lr)
+
+        # train for one epoch
+        for i, (input, target) in enumerate(train_loader):
+            data_times.update(time.time() - end)
+            target = target.to(args.device)
+            input_var = Variable(input).to(args.device)
+            target_var = Variable(target).to(args.device)
+
+            # compute output and update, and let nodes quantized in the same label have the same average gradient
+            output = model(input_var)
+            loss = criterion(output, target_var)
+            optimizer.zero_grad()
+            loss.backward()
+            for name, p in model.named_parameters():
+                if be_ignored(name, args.model_mode):
+                    continue
+                quan_bits = 2 ** int(args.bits['fc' if 'fc' in name else 'conv'])
+                quan_labels = quan_name2labels[name]
+                tensor = p.data.cpu().numpy()
+                grad_tensor = p.grad.data.cpu().numpy()
+                grad_centers = list()
+                for j in range(quan_bits):
+                    grad_by_index = grad_tensor[quan_labels == j]
+                    grad_center = np.mean(grad_by_index)
+                    grad_centers.append(grad_center)
+                grad_centers = np.array(grad_centers)
+                grad_tensor = grad_centers[quan_labels]
+                grad_tensor = np.where(tensor == 0, 0, grad_tensor)
+                p.grad.data = torch.from_numpy(grad_tensor).to(args.device)
+            optimizer.step()
+            output = output.float()
+            loss = loss.float()
+
+            # measure accuracy and record loss
+            prec1 = accuracy(output.data, target, topk=(1,))[0]
+            losses.update(loss.item(), input.size(0))
+            top1s.update(prec1, input.size(0))
+
+            # measure elapsed time
+            batch_times.update(time.time() - end)
+            end = time.time()
+            if i % args.print_freq == 0:
+                print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
+                      f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
+                      f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
+                      f'Loss {losses.val:.4f} ({losses.avg:.4f})\t'
+                      f'Prec {top1s.val:.3f} ({top1s.avg:.3f})')
+
+        # evaluate on validation set
+        prec1, prec5 = validate(val_loader, model, args, topk=(1, 5))
+        log(args.log_file_path, f"[epoch {epoch}]")
+        log(args.log_file_path, f"initial_accuracy\t{prec1}")
+        log(args.log_file_path, f"initial_top5_accuracy\t{prec5}")
+    return model
 
 
 def conv_delta_penalty(model, device, penalty, mode):
@@ -358,72 +428,6 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 
-def train(train_loader, model, optimizer, epoch, args, tok=""):
-    """ Train one epoch. """
-    batch_times = AverageMeter()
-    data_times = AverageMeter()
-    losses = AverageMeter()
-    top1s = AverageMeter()
-    all_penalties = AverageMeter()
-    fc_penalties = AverageMeter()
-    conv_penalties = AverageMeter()
-    criterion = nn.CrossEntropyLoss().to(args.device)
-    penalty = nn.MSELoss(reduction='sum').to(args.device)
-    # penalty = nn.L1Loss(reduction='sum').to(args.device)
-    model.train()
-    end = time.time()
-    for i, (input, target) in enumerate(train_loader):
-        data_times.update(time.time() - end)  # measure data loading time
-
-        target = target.to(args.device)
-        input_var = torch.autograd.Variable(input).to(args.device)
-        target_var = torch.autograd.Variable(target).to(args.device)
-
-        # compute output and loss
-        output = model(input_var)
-        all_penalty, fc_penalty_, conv_penalty_ = get_layers_penalty(model, penalty, args, tok)
-        loss = criterion(output, target_var) + all_penalty
-        all_penalties.update(all_penalty)
-        fc_penalties.update(fc_penalty_)
-        conv_penalties.update(conv_penalty_)
-
-        # compute gradient and update
-        optimizer.zero_grad()
-        loss.backward()
-        if tok == "prune_retrain":  # let the gradient of the pruned node become 0
-            for name, p in model.named_parameters():
-                if (args.model_mode == 'd' and 'conv' in name or
-                        args.model_mode == 'c' and 'fc' in name or
-                        'mask' in name or
-                        'bias' in name):
-                    continue
-                tensor_arr = p.data.cpu().numpy()
-                grad_tensor_arr = p.grad.data.cpu().numpy()
-                grad_tensor_arr = np.where(tensor_arr == 0, 0, grad_tensor_arr)
-                p.grad.data = torch.from_numpy(grad_tensor_arr).to(args.device)
-        optimizer.step()
-        output = output.float()
-        loss = loss.float()
-
-        # measure accuracy and record loss
-        prec1 = accuracy(output.data, target, topk=(1,))[0]
-        losses.update(loss.item(), input.size(0))
-        top1s.update(prec1, input.size(0))
-
-        # measure elapsed time
-        batch_times.update(time.time() - end)
-        end = time.time()
-
-        # print log
-        if i % args.print_freq == 0:
-            print(f'Epoch: [{epoch}][{i}/{len(train_loader)}]\t'
-                  f'Time {batch_times.val:.3f} ({batch_times.avg:.3f})\t'
-                  f'Data {data_times.val:.3f} ({data_times.avg:.3f})\t'
-                  f'Loss {losses.val:.3f} ({losses.avg:.3f})\t'
-                  f'Prec {top1s.val:.3f} ({top1s.avg:.3f})\t'
-                  f'Layer penalty {all_penalties.avg:.3f} ( fc: {fc_penalties.avg:.3f} , conv: {conv_penalties.avg:.3f} )')
-
-
 def get_method_str(args):
     method_list = list()
     if args.model_mode != 'c':
@@ -472,9 +476,9 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def adjust_learning_rate(optimizer, epoch, args):
+def adjust_learning_rate(optimizer, epoch, args, lr):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // args.lr_drop_interval))
+    adj_lr = lr * (0.1 ** (epoch // args.lr_drop_interval))
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['lr'] = adj_lr
     return optimizer
