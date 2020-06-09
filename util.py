@@ -351,7 +351,7 @@ def conv_matrix2d_mean_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
-def conv_matrix1d_delta_penalty(model, device, penalty, mode):
+def conv_width1d_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
@@ -396,10 +396,10 @@ def get_layers_penalty(model, penalty, args, tok):
     if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
         if not ('filter' in args.prune_mode or 'channel' in args.prune_mode):
             conv_penalty_ = 0.0
-        elif args.conv_loss_func == 'filter-delta':
+        elif args.conv_loss_func == 'filter3d-delta':
             conv_penalty_ = conv_filter_delta_penalty(model, args.device, penalty, args.prune_mode)
-        elif args.conv_loss_func == 'matrix1d-delta':
-            conv_penalty_ = conv_matrix1d_delta_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'width1d-delta':
+            conv_penalty_ = conv_width1d_delta_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'position-mean':
             conv_penalty_ = conv_position_mean_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'matrix2d-mean':
