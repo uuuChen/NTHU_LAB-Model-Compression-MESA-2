@@ -95,7 +95,8 @@ def initial_train(model, args, train_loader, val_loader, tok):
     else:  # for prune retrain
         epochs = args.prune_retrain_epochs
         lr = args.prune_retrain_lr
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=args.weight_decay)
     print(f'start epoch {args.start_epoch} / end epoch {epochs}')
     for epoch in range(args.start_epoch, epochs):
         print(f'\nin epoch {epoch}')
@@ -291,9 +292,7 @@ def quantized_retrain(model, args, quan_name2labels, train_loader, val_loader):
     return model
 
 
-def conv_delta_penalty(model, device, penalty, mode):
-    if not ('filter' in mode or 'channel' in mode):
-        return 0.0
+def conv_filter_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
@@ -320,8 +319,6 @@ def conv_delta_penalty(model, device, penalty, mode):
 
 
 def conv_position_mean_penalty(model, device, penalty, mode):
-    if not ('filter' in mode or 'channel' in mode):
-        return 0.0
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
@@ -339,8 +336,6 @@ def conv_position_mean_penalty(model, device, penalty, mode):
 
 
 def conv_matrix2d_mean_penalty(model, device, penalty, mode):
-    if not ('filter' in mode or 'channel' in mode):
-        return 0.0
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
@@ -357,8 +352,6 @@ def conv_matrix2d_mean_penalty(model, device, penalty, mode):
 
 
 def conv_matrix1d_delta_penalty(model, device, penalty, mode):
-    if not ('filter' in mode or 'channel' in mode):
-        return 0.0
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
@@ -401,8 +394,10 @@ def get_layers_penalty(model, penalty, args, tok):
         fc_penalty_ = fc_penalty(model, args.device, penalty)
         all_penalty += args.alpha * fc_penalty_
     if args.model_mode != 'd' and tok == "prune_retrain" and args.beta != 0:
-        if args.conv_loss_func == 'delta':
-            conv_penalty_ = conv_delta_penalty(model, args.device, penalty, args.prune_mode)
+        if not ('filter' in args.prune_mode or 'channel' in args.prune_mode):
+            conv_penalty_ = 0.0
+        elif args.conv_loss_func == 'filter-delta':
+            conv_penalty_ = conv_filter_delta_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'matrix1d-delta':
             conv_penalty_ = conv_matrix1d_delta_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'position-mean':

@@ -12,7 +12,7 @@ python main.py -mm d -initp -quanp -encp -umfcm -b conv=5,fc=5 -p fc1=10,fc2=10,
 
 # ----------------------- MESA2-conv ------------------------------
 # ----------- AlexNet ---------------
-# norm-base, delta loss
+# norm-base, filter-delta loss
 python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 0.0 -sd model_mesa_0.0_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -prep 200 -cde
 python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 0.1 -sd model_mesa_0.1_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -prep 200 -cde
 python main.py -mm c -prunep -quanp -encp -b conv=5,fc=5 -pm filter-norm -be 1.0 -sd model_mesa_1.0_filter_norm_conv -lm model_mesa_AlexNet/checkpoint_initial_alpha_0.1_149.tar -prlr 0.1 -prep 200 -cde

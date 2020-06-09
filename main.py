@@ -71,7 +71,7 @@ parser.add_argument('--prune-retrain-epochs', '-prep', default=40, type=int, met
 parser.add_argument('--prune-retrain-lr', '-prlr', default=0.0001, type=float, metavar='PRLR', help='pruning retrain learning rate')
 parser.add_argument('--alpha', '-al', default=0.1, type=float, metavar='M', help='alpha (default=0.1), correspond to fc')
 parser.add_argument('--beta', '-be', default=0.1, type=float, metavar='M',  help='beta (default=0.1), correspond to conv')
-parser.add_argument('--conv-loss-func', '-clf', type=str, default='delta', help='can be delta or position-mean or matrix2d-mean (default delta)')
+parser.add_argument('--conv-loss-func', '-clf', type=str, default='filter-delta', help='can be filter-delta or position-mean or matrix2d-mean (default filter-delta)')
 
 # ------------- quantize process ----------------------------------------------------
 parser.add_argument('--qauntize_epochs', '-qep', default=20, type=int, metavar='N',  help='number of quantize retrain epochs to run (default: 20)')

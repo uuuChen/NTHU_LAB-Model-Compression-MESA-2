@@ -32,7 +32,7 @@ def matrix_cycledistance(array_x, array_y, maxdistance):
     return distancearray
 
 
-def delta_encoding_conv4d(conv4d_indices, args, maxdistance):
+def conv_filter_delta_coding(conv4d_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory):
     first_filter = prev_filter = None
     delta_filters = list()
     for i, cur_filter in list(enumerate(conv4d_indices)):
@@ -50,16 +50,40 @@ def delta_encoding_conv4d(conv4d_indices, args, maxdistance):
         for i in range(filter_shape[1]):
             for j in range(filter_shape[2]):
                 filters_pos_indices = delta_filters[:, ch, i, j]
-                same_pos_same_indices_percentage += get_index_percentage(
-                    filters_pos_indices, int(Counter(filters_pos_indices).most_common(1)[0][0]))
+                same_pos_same_indices_percentage += get_index_percentage(filters_pos_indices, int(Counter(filters_pos_indices).most_common(1)[0][0]))
     same_pos_same_indices_percentage /= len(first_filter.reshape(-1))
-    print(f'percentage of same indices in same position of delta blocks: {same_pos_same_indices_percentage:.2f} %')
+    print(f'percentage of same indices in same position of filter-delta blocks: {same_pos_same_indices_percentage:.2f} %')
     for i in range(2 ** int(args.bits['conv']) + 1):
-        print(f'{i}: {get_index_percentage(conv4d_indices, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
-    return first_filter, delta_filters
+        print(
+            f'{i}: {get_index_percentage(conv4d_indices, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
+
+    # Encode
+    t0, d0 = huffman_encode(first_filter.astype('float32'), directory)
+    t1, d1 = huffman_encode(delta_filters.astype('float32'), directory)
+    t2, d2 = huffman_encode(pruned_filter_indices.astype('int32'), directory)
+    t3, d3 = huffman_encode(pruned_channel_indices.astype('int32'), directory)
+
+    # Print statistics
+    original = first_filter.nbytes + delta_filters.nbytes + pruned_filter_indices.nbytes + pruned_channel_indices.nbytes
+    compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
+
+    return original, compressed
 
 
-def delta_encoding_fc2d(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
+def conv_non_delta_coding(unpruned_conv_indices, pruned_filter_indices, pruned_channel_indices, directory):
+    # Encode
+    t0, d0 = huffman_encode(unpruned_conv_indices.astype('float32'), directory)
+    t1, d1 = huffman_encode(pruned_filter_indices.astype('int32'), directory)
+    t2, d2 = huffman_encode(pruned_channel_indices.astype('int32'), directory)
+
+    # Print statistics
+    original = unpruned_conv_indices.nbytes + pruned_filter_indices.nbytes + pruned_channel_indices.nbytes
+    compressed = t0 + t1 + t2 + d0 + d1 + d2
+
+    return original, compressed
+
+
+def fc_block_delta_coding(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
     num_of_block_rows = fc2d_indices.shape[0] // partitionsize
     num_of_block_cols = fc2d_indices.shape[1] // partitionsize
     delta_blocks = list()
@@ -84,10 +108,9 @@ def delta_encoding_fc2d(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
     for i in range(block_shape[0]):
         for j in range(block_shape[1]):
             blocks_pos_indices = delta_blocks[:, i, j]
-            same_pos_same_indices_percentage += get_index_percentage(
-                blocks_pos_indices, int(Counter(blocks_pos_indices).most_common(1)[0][0]))
+            same_pos_same_indices_percentage += get_index_percentage(blocks_pos_indices, int(Counter(blocks_pos_indices).most_common(1)[0][0]))
     same_pos_same_indices_percentage /= len(first_block.reshape(-1))
-    print(f'percentage of same indices in same position of delta blocks: {same_pos_same_indices_percentage:.2f} %')
+    print(f'percentage of same indices in same position of filter-delta blocks: {same_pos_same_indices_percentage:.2f} %')
     nonzero_indices = fc2d_indices[fc2d_arr != 0]
     for i in range(2 ** 5 + 1):
         print(f'{i}: {get_index_percentage(nonzero_indices, i) :.2f} % | {get_index_percentage(delta_blocks, i) :.2f} %')
@@ -99,35 +122,15 @@ def mesa2_huffman_encode_conv4d(model, name, args, conv4d_arr, maxdistance, dire
         model.set_conv_prune_indices_dict()
     pruned_filter_indices, pruned_channel_indices = model.conv2pruneIndicesDict[name]
     unpruned_conv_indices = util.get_unpruned_conv_weights(to_indices(conv4d_arr), model, name)
-
-    if args.conv_delta_encoding:
-        first_filter_arr, delta_filters_arr = delta_encoding_conv4d(unpruned_conv_indices, args, maxdistance)
-
-        # Encode
-        t0, d0 = huffman_encode(first_filter_arr.astype('float32'), directory)
-        t1, d1 = huffman_encode(delta_filters_arr.astype('float32'), directory)
-        t2, d2 = huffman_encode(pruned_filter_indices.astype('int32'), directory)
-        t3, d3 = huffman_encode(pruned_channel_indices.astype('int32'), directory)
-
-        # Print statistics
-        original = (first_filter_arr.nbytes + delta_filters_arr.nbytes + pruned_filter_indices.nbytes +
-                    pruned_channel_indices.nbytes)
-        compressed = t0 + t1 + t2 + t3 + d0 + d1 + d2 + d3
+    if args.conv_loss_func == "filter-delta":
+        original, compressed = conv_filter_delta_coding(unpruned_conv_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory)
     else:
-        # Encode
-        t0, d0 = huffman_encode(unpruned_conv_indices.astype('float32'), directory)
-        t1, d1 = huffman_encode(pruned_filter_indices.astype('int32'), directory)
-        t2, d2 = huffman_encode(pruned_channel_indices.astype('int32'), directory)
-
-        # Print statistics
-        original = unpruned_conv_indices.nbytes + pruned_filter_indices.nbytes + pruned_channel_indices.nbytes
-        compressed = t0 + t1 + t2 + d0 + d1 + d2
-
+        original, compressed = conv_non_delta_coding(unpruned_conv_indices, pruned_filter_indices, pruned_channel_indices, directory)
     return original, compressed
 
 
 def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, maxdistance, directory):
-    first_block_arr, delta_blocks_arr = delta_encoding_fc2d(to_indices(fc2d_arr), fc2d_arr, partitionsize, maxdistance)
+    first_block_arr, delta_blocks_arr = fc_block_delta_coding(to_indices(fc2d_arr), fc2d_arr, partitionsize, maxdistance)
 
     # Encode
     t0, d0 = huffman_encode(first_block_arr, directory)
@@ -152,11 +155,9 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
         if 'weight' in name:
             weight = param.data.cpu().numpy()
             if 'conv' in name and args.model_mode != 'd':
-                original, compressed = mesa2_huffman_encode_conv4d(
-                    model, name.split('.')[0], args, weight, 2**int(args.bits['conv']), directory)
+                original, compressed = mesa2_huffman_encode_conv4d(model, name.split('.')[0], args, weight, 2**int(args.bits['conv']), directory)
             elif 'fc' in name and args.model_mode != 'c':
-                original, compressed = mesa2_huffman_encode_fc2d(
-                    weight, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
+                original, compressed = mesa2_huffman_encode_fc2d(weight, int(args.partition[name[0:3]]), 2**int(args.bits['fc']), directory)
             else:
                 ignore = True
         else:  # bias
