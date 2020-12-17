@@ -5,7 +5,6 @@ import torch
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-import warnings
 from PIL import ImageFile
 
 # Custom
@@ -15,7 +14,6 @@ import data_loader
 from quantization import apply_weight_sharing
 from mesa2_encoder import mesa2_huffman_encode_model
 from deepc_encoder import deepc_huffman_encode_model
-from prune import MaskedConv2d
 
 
 class StoreDictKeyPair(argparse.Action):
@@ -29,15 +27,16 @@ class StoreDictKeyPair(argparse.Action):
 
 parser = argparse.ArgumentParser(description='MESA2 Training')
 
-##############################
+# ----------------------------
 # MESA setting
-##############################
+# ----------------------------
 parser.add_argument("--partition", '-p', dest="partition", action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...", help='partition size of fc layer (eg. fc1=8,fc2=8,fc3=10)')
 
 
-##############################
+# ----------------------------
 # MESA-2 setting
-##############################
+# ----------------------------
+
 # ------------- general setting ----------------------------------------------------
 parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')
 parser.add_argument('--seed', type=int, default=42, metavar='S', help='random seed (default: 42)')
@@ -75,11 +74,11 @@ parser.add_argument('--conv-loss-func', '-clf', type=str, default='filter3d-delt
 
 # ------------- quantize process ----------------------------------------------------
 parser.add_argument('--qauntize_epochs', '-qep', default=20, type=int, metavar='N',  help='number of quantize retrain epochs to run (default: 20)')
-parser.add_argument('--quantize-retrain-lr', '-qrlr', default=0.0001, type=float,  metavar='QRLR', help='quantize retrain learning rate')
+parser.add_argument('--quantize-retrain-lr', '-qrlr', default=0.00001, type=float,  metavar='QRLR', help='quantize retrain learning rate')
 parser.add_argument('--bits', '-b', action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...", help='partition size of fc layer (eg. conv=8,fc=5)')
 
 # ------------- encoding process  ----------------------------------------------------
-parser.add_argument('--conv-delta-encoding', '-cde', dest='conv_delta_encoding', action='store_true',  help='use delta encoding on conv or not')
+pass
 
 args = train_loader = val_loader = model = None
 
@@ -95,17 +94,17 @@ def environ_setting():
     args.method_str = util.get_method_str(args)
     args.log_file_path = os.path.join(args.save_dir, args.log_file_name)
     print(f'Method | {args.method_str}')
-    args.best_prec1 = 0.0
+    args.best_top1_acc = 0.0
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
 
     # others setting
     if args.use_cuda:
-        print("Using CUDA!")
+        print("Using CUDA")
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         torch.backends.cudnn.benchmark = True
         args.device = torch.device("cuda")
     else:
-        print('Not using CUDA!')
+        print('Not using CUDA')
         args.device = torch.device("cpu")
     torch.manual_seed(args.seed)
     ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -144,20 +143,7 @@ def pruning_process():
     util.log(args.log_file_path, f"before pruning accuracy\t{top1_acc} ({top5_acc})")
 
     util.topic_log("Pruning CNN")
-    if args.prune_mode == 'percentile':
-        conv_idx = 0
-        for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-                model.prune_by_percentile([name], q=100*args.prune_rates[conv_idx])
-                conv_idx += 1
-    elif 'filter' in args.prune_mode or "channel" in args.prune_mode:
-        if args.prune_mode != 'filter-gm':  # filter-gm prunes model during initial_train
-            prune_rates = args.prune_rates
-            if 'filter' in args.prune_mode:
-                prune_rates = model.get_conv_actual_prune_rates(args.prune_rates, print_log=True)
-            model.prune_step(prune_rates, mode=args.prune_mode)
-        model.set_conv_prune_indices_dict()
-
+    model.prune(args)
     util.topic_log("After prune CNN")
     util.print_nonzeros(model, args.log_file_path)
     top1_acc, top5_acc = util.validate(val_loader, model, args, topk=(1, 5))
@@ -179,13 +165,13 @@ def quantize_process():
     util.log(args.log_file_path, f"accuracy before weight sharing\t{top1_acc} ({top5_acc})")
 
     util.topic_log("Accuracy after weight sharing")
-    quan_name2labels = apply_weight_sharing(model, args)
+    layerName2quanIndices = apply_weight_sharing(model, args)
     top1_acc, top5_acc = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", top1_acc, "initial", args)
     util.log(args.log_file_path, f"accuracy after weight sharing {args.bits}bits\t{top1_acc} ({top5_acc})")
 
     util.topic_log("Quantize retraining")
-    util.quantized_retrain(model, args, quan_name2labels, train_loader, val_loader)
+    util.quantized_retrain(model, args, layerName2quanIndices, train_loader, val_loader)
     top1_acc, top5_acc = util.validate(val_loader, model, args, topk=(1, 5))
     util.save_masked_checkpoint(model, "quantized", top1_acc, "end", args)
     util.log(args.log_file_path, f"accuracy after qauntize and retrain\t{top1_acc} ({top5_acc})")
@@ -204,6 +190,7 @@ def encoding_process():
 
 def main():
     environ_setting()
+    # util.show_quantized_channel2ds(model)
     run_processes()
 
 

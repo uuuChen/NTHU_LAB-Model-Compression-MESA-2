@@ -1,7 +1,5 @@
 import numpy as np
 import util
-from collections import Counter
-
 from huffmancoding import huffman_encode
 
 
@@ -11,42 +9,41 @@ def to_indices(layer):
     return np.vectorize(value2idx_dict.get)(layer)
 
 
-def cycledistance(a, b, maxdistance):
+def cycle_distance(a, b, max_distance):
     if b - a >= 0:
         return b - a
     else:
-        return b - a + maxdistance
+        return b - a + max_distance
 
 
 def get_index_percentage(indices_arr, index):
     return len(np.where(indices_arr == index)[0]) / len(indices_arr.reshape(-1)) * 100.
 
 
-def matrix_cycledistance(array_x, array_y, maxdistance):
+def matrix_cycledistance(array_x, array_y, max_distance):
     flat_list_x = list(array_x.reshape(-1))
     flat_list_y = list(array_y.reshape(-1))
-    distancearray = list()
+    distance_array = list()
     for x_val, y_val in list(zip(flat_list_x, flat_list_y)):
-        distancearray.append(cycledistance(x_val, y_val, maxdistance))
-    distancearray = np.array(distancearray).reshape(array_x.shape)
-    return distancearray
+        distance_array.append(cycle_distance(x_val, y_val, max_distance))
+    distance_array = np.array(distance_array).reshape(array_x.shape)
+    return distance_array
 
 
-def conv_filter3d_delta_coding(conv4d_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory):
+def conv_filter3d_delta_coding(conv4d_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory):
     first_filter = prev_filter = None
     delta_filters = list()
     for i, cur_filter in list(enumerate(conv4d_indices)):
         if i == 0:
             first_filter = cur_filter
         else:
-            delta_filters.append(matrix_cycledistance(prev_filter, cur_filter, maxdistance))
+            delta_filters.append(matrix_cycledistance(prev_filter, cur_filter, max_distance))
         prev_filter = cur_filter
     delta_filters = np.array(delta_filters)
 
     # print quantized indices statistics
     for i in range(2 ** int(args.bits['conv']) + 1):
-        print(
-            f'{i}: {get_index_percentage(conv4d_indices, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
+        print(f'{i}: {get_index_percentage(conv4d_indices, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
 
     # Encode
     t0, d0 = huffman_encode(first_filter.astype('float32'), directory)
@@ -61,7 +58,7 @@ def conv_filter3d_delta_coding(conv4d_indices, args, maxdistance, pruned_filter_
     return original, compressed
 
 
-def conv_width1d_delta_coding(conv4d_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory):
+def conv_width1d_delta_coding(conv4d_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory):
     indices2d = conv4d_indices.reshape(-1, conv4d_indices.shape[3])  # shape: (kn * cn * h, w)
     first_col = prev_col = None
     delta_cols = list()
@@ -70,7 +67,7 @@ def conv_width1d_delta_coding(conv4d_indices, args, maxdistance, pruned_filter_i
         if i == 0:
             first_col = cur_col
         else:
-            delta_cols.append(matrix_cycledistance(prev_col, cur_col, maxdistance))
+            delta_cols.append(matrix_cycledistance(prev_col, cur_col, max_distance))
         prev_col = cur_col
     delta_cols = np.array(delta_cols)
 
@@ -105,12 +102,12 @@ def conv_non_delta_coding(unpruned_conv_indices, pruned_filter_indices, pruned_c
     return original, compressed
 
 
-def get_fc_delta_blocks(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
-    num_of_block_rows = fc2d_indices.shape[0] // partitionsize
-    num_of_block_cols = fc2d_indices.shape[1] // partitionsize
+def get_fc_delta_blocks(fc2d_indices, fc2d_arr, partition_size, max_distance):
+    num_of_block_rows = fc2d_indices.shape[0] // partition_size
+    num_of_block_cols = fc2d_indices.shape[1] // partition_size
     delta_blocks = list()
     first_block = prev_block = None
-    for i in range(partitionsize):
+    for i in range(partition_size):
         if i == 0:
             first_block = fc2d_indices[:num_of_block_rows, :num_of_block_cols]
             prev_block = first_block
@@ -119,7 +116,7 @@ def get_fc_delta_blocks(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
                 i*num_of_block_rows: (i+1)*num_of_block_rows,
                 i*num_of_block_cols: (i+1)*num_of_block_cols
             ]
-            delta_blocks.append(matrix_cycledistance(prev_block, cur_block, maxdistance))
+            delta_blocks.append(matrix_cycledistance(prev_block, cur_block, max_distance))
             prev_block = cur_block
     first_block = first_block.astype('float32')
     delta_blocks = np.array(delta_blocks).astype('float32')
@@ -132,22 +129,22 @@ def get_fc_delta_blocks(fc2d_indices, fc2d_arr, partitionsize, maxdistance):
     return first_block, delta_blocks
 
 
-def mesa2_huffman_encode_conv4d(model, name, args, conv4d_arr, maxdistance, directory):
+def mesa2_huffman_encode_conv4d(model, name, args, conv4d_arr, max_distance, directory):
     if model.conv2pruneIndicesDict is None:
-        model.set_conv_prune_indices_dict()
+        model.set_conv_indices_dict()
     pruned_filter_indices, pruned_channel_indices = model.conv2pruneIndicesDict[name]
     unpruned_conv_indices = util.get_unpruned_conv_weights(to_indices(conv4d_arr), model, name)
     if args.conv_loss_func == "filter3d-delta":
-        original, compressed = conv_filter3d_delta_coding(unpruned_conv_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory)
+        original, compressed = conv_filter3d_delta_coding(unpruned_conv_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
     elif args.conv_loss_func == "width1d-delta":
-        original, compressed = conv_width1d_delta_coding(unpruned_conv_indices, args, maxdistance, pruned_filter_indices, pruned_channel_indices, directory)
+        original, compressed = conv_width1d_delta_coding(unpruned_conv_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
     else:
         original, compressed = conv_non_delta_coding(unpruned_conv_indices, pruned_filter_indices, pruned_channel_indices, directory)
     return original, compressed
 
 
-def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, maxdistance, directory):
-    first_block_arr, delta_blocks_arr = get_fc_delta_blocks(to_indices(fc2d_arr), fc2d_arr, partitionsize, maxdistance)
+def mesa2_huffman_encode_fc2d(fc2d_arr, partitionsize, max_distance, directory):
+    first_block_arr, delta_blocks_arr = get_fc_delta_blocks(to_indices(fc2d_arr), fc2d_arr, partitionsize, max_distance)
 
     # Encode
     t0, d0 = huffman_encode(first_block_arr, directory)
@@ -178,8 +175,7 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
             else:
                 ignore = True
         else:  # bias
-            if ('conv' in name and args.model_mode != 'd' or
-                    'fc' in name and args.model_mode != 'c'):
+            if 'conv' in name and args.model_mode != 'd' or 'fc' in name and args.model_mode != 'c':
                 bias = param.data.cpu().numpy()
                 original = bias.nbytes
                 compressed = original

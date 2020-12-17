@@ -1,12 +1,11 @@
 import torch
 import numpy as np
 from sklearn.cluster import KMeans
-
 import util
 
 
 def apply_weight_sharing(model, args):
-    quan_name2labels = dict()
+    layerName2quanIndices = dict()
     for name, param in model.named_parameters():
         if util.be_ignored(name, args.model_mode):
             print(f'{name:20} | {str(param.size()):35} | => pass')
@@ -32,9 +31,9 @@ def apply_weight_sharing(model, args):
         param.data = torch.from_numpy(quan_weights).float().to(args.device)
 
         # reconstruct quantized labels
-        quan_labels = np.zeros(ori_weights.shape)
-        quan_labels[nonzero_indices] = kmeans.labels_
-        quan_name2labels[name] = quan_labels.astype(int)
+        quan_indices = np.zeros(ori_weights.shape)
+        quan_indices[nonzero_indices] = kmeans.labels_
+        layerName2quanIndices[name] = quan_indices.astype(int)
 
-    return quan_name2labels
+    return layerName2quanIndices
 

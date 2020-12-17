@@ -14,6 +14,21 @@ class PruningModule(Module):
         self.conv2pruneIndicesDict = None
         self.conv2leftIndicesDict = None
 
+    def prune(self, args):
+        if args.prune_mode == 'percentile':
+            conv_idx = 0
+            for name, module in self.named_modules():
+                if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+                    self.prune_by_percentile([name], q=100 * args.prune_rates[conv_idx])
+                    conv_idx += 1
+        elif 'filter' in args.prune_mode or "channel" in args.prune_mode:
+            if args.prune_mode != 'filter-gm':  # filter-gm prunes self during initial_train
+                prune_rates = args.prune_rates
+                if 'filter' in args.prune_mode:
+                    prune_rates = self.get_conv_actual_prune_rates(args.prune_rates, print_log=True)
+                self.prune_step(prune_rates, mode=args.prune_mode)
+            self.set_conv_indices_dict()
+
     def prune_by_percentile(self, layerlist, q=5.0):
         """
         Note:
@@ -131,9 +146,8 @@ class PruningModule(Module):
                 # (1 - prune_rate) = ((fn * (1 - new_prune_rate)) * (cn - Prune_filter_nums) * kh * kw) / (fn * cn * kh
                 # * kw)
                 if conv_idx != 0:
-                    target_filter_prune_rate = (
-                            1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
-                    )
+                    target_filter_prune_rate = 1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
+
                 prune_filter_nums = round(filter_nums * target_filter_prune_rate)
                 actual_filter_prune_rate = prune_filter_nums / filter_nums
                 filter_bias = abs(actual_filter_prune_rate - target_filter_prune_rate)
@@ -162,7 +176,7 @@ class PruningModule(Module):
 
         return new_pruning_rates
 
-    def set_conv_prune_indices_dict(self):
+    def set_conv_indices_dict(self):
         self.conv2pruneIndicesDict = dict()
         self.conv2leftIndicesDict = dict()
         for name, module in self.named_modules():
@@ -181,8 +195,7 @@ class PruningModule(Module):
 
 
 class _ConvNd(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride,
-                 padding, dilation, transposed, output_padding, groups, bias):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation, transposed, output_padding, groups, bias):
         super(_ConvNd, self).__init__()
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -235,19 +248,15 @@ class _ConvNd(Module):
 
 
 class MaskedConv2d(_ConvNd):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, dilation=1, groups=1, bias=True):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
-        super(MaskedConv2d, self).__init__(
-            in_channels, out_channels, kernel_size, stride, padding, dilation,
-            False, _pair(0), groups, bias)
+        super(MaskedConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation,  False, _pair(0), groups, bias)
 
     def forward(self, input):
-        return F.conv2d(input, self.weight*self.mask, self.bias, self.stride,
-                        self.padding, self.dilation, self.groups)
+        return F.conv2d(input, self.weight*self.mask, self.bias, self.stride, self.padding, self.dilation, self.groups)
 
 
 
