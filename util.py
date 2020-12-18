@@ -380,14 +380,13 @@ def conv_group_filter3d_delta_penalty(model, device, penalty, mode):
             penalty_filters = 0
             for group_filters_indices in groups_filters_indices:
                 group_conv_weights = left_conv_weights[group_filters_indices, :, :, :]
-                temp = 0
                 if group_conv_weights.shape[0] > 1:  # Need at least two filter to compute loss
                     for i in range(group_conv_weights.shape[0] - 1):
-                        temp += penalty(
+                        penalty_filters += penalty(
                             group_conv_weights[i, :, :, :],
                             group_conv_weights[i+1, :, :, :]
                         )
-                    penalty_filters += (temp / (group_conv_weights.shape[0] - 1))
+            penalty_filters /= (left_conv_weights.shape[0] - len(groups_filters_indices))
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
