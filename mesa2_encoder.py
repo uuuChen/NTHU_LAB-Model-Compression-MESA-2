@@ -220,22 +220,21 @@ def mesa2_huffman_encode_model(model, args, directory='encodings/'):
         else:  # bias
             if 'conv' in name and args.model_mode != 'd' or 'fc' in name and args.model_mode != 'c':
                 bias = param.data.cpu().numpy()
-                original = bias.nbytes
-                compressed = original
+                original = compressed = bias.nbytes
             else:
                 ignore = True
 
         # Print and log statistics
         if ignore:
             log_str = f"{name:<15} | {'* pass':>10}"
-            print(log_str)
             util.log(args.log_file_path, log_str)
+            print(log_str)
         else:
             original_total += original
             compressed_total += compressed
             log_str = f"{name:<15} | {original:10} {compressed:10} {original / compressed:>10.2f}x {100 * compressed / original:>6.2f}%"
-            print(log_str)
             util.log(args.log_file_path, log_str)
+            print(log_str)
 
     # Print and log statistics
     part_model_original_bytes = util.get_part_model_original_bytes(model, args)

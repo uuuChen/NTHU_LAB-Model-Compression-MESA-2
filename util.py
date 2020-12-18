@@ -362,6 +362,37 @@ def conv_part_filter3d_delta_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
+def conv_group_filter3d_delta_penalty(model, device, penalty, mode):
+    penalty_layers = list()
+    filters_nums_per_group = 10  # hyperparameter
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
+
+            # Sorted by absolute sum
+            sum_of_filters = np.sum(np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1)
+            sorted_filters_indices = np.argsort(sum_of_filters)
+            groups_filters_indices = list()
+            for i in range(0, len(sorted_filters_indices), filters_nums_per_group):
+                groups_filters_indices.append(sorted_filters_indices[i:i+filters_nums_per_group])
+
+            # Compute loss by sum of each group of convolution weights
+            penalty_filters = 0
+            for group_filters_indices in groups_filters_indices:
+                group_conv_weights = left_conv_weights[group_filters_indices, :, :, :]
+                temp = 0
+                if group_conv_weights.shape[0] > 1:  # Need at least two filter to compute loss
+                    for i in range(group_conv_weights.shape[0] - 1):
+                        temp += penalty(
+                            group_conv_weights[i, :, :, :],
+                            group_conv_weights[i+1, :, :, :]
+                        )
+                    penalty_filters += (temp / (group_conv_weights.shape[0] - 1))
+            penalty_layers.append(penalty_filters)
+    penalty = torch.mean(torch.stack(penalty_layers))
+    return penalty.to(device)
+
+
 def conv_position_mean_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
@@ -450,6 +481,8 @@ def get_layers_penalty(model, penalty, args, tok):
             conv_penalty = conv_matrix2d_mean_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'part-filter3d-delta':
             conv_penalty = conv_part_filter3d_delta_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'group-filter3d-delta':
+            conv_penalty = conv_group_filter3d_delta_penalty(model, args.device, penalty, args.prune_mode)
         else:
             raise Exception
         all_penalty += args.beta * conv_penalty
