@@ -11,8 +11,8 @@ from torch.nn.modules.utils import _pair
 class PruningModule(Module):
     def __init__(self):
         super(PruningModule, self).__init__()
-        self.conv2pruneIndicesDict = None
-        self.conv2leftIndicesDict = None
+        self.convLayerName2pruneIndices = None
+        self.convLayerName2leftIndices = None
 
     def prune(self, args):
         if args.prune_mode == 'percentile':
@@ -177,8 +177,8 @@ class PruningModule(Module):
         return new_pruning_rates
 
     def set_conv_indices_dict(self):
-        self.conv2pruneIndicesDict = dict()
-        self.conv2leftIndicesDict = dict()
+        self.convLayerName2pruneIndices = dict()
+        self.convLayerName2leftIndices = dict()
         for name, module in self.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
                 conv_arr = module.weight.data.cpu().numpy()
@@ -190,8 +190,8 @@ class PruningModule(Module):
                 left_filter_indices = list(set(range(conv_arr.shape[0])).difference(pruned_filter_indices))
                 left_channel_indices = list(set(range(perm_conv_arr.shape[0])).difference(pruned_channel_indices))
 
-                self.conv2pruneIndicesDict[name] = (pruned_filter_indices, pruned_channel_indices)
-                self.conv2leftIndicesDict[name] = (left_filter_indices, left_channel_indices)
+                self.convLayerName2pruneIndices[name] = (pruned_filter_indices, pruned_channel_indices)
+                self.convLayerName2leftIndices[name] = (left_filter_indices, left_channel_indices)
 
 
 class _ConvNd(Module):

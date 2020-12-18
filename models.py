@@ -35,12 +35,6 @@ class AlexNet(PruningModule):
         self.fc2 = nn.Linear(4096, 4096)
         self.fc3 = nn.Linear(4096, num_of_class)
 
-        for m in self.modules():
-            if isinstance(m, MaskedConv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                m.bias.data.zero_()
-
     def forward(self, x):
         out = self.conv1(x)
         out = self.conv1_bn(out)
@@ -72,6 +66,7 @@ class AlexNet(PruningModule):
         return out
 
 
+# ---------------------------------------- AlexNetMask --------------------------------------------
 def inverse_permutation(p):
     s = torch.empty(p.size(), dtype=torch.long)
     index = 0
@@ -268,8 +263,7 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, **kwargs):
         kwargs['init_weights'] = False
     model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
+        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
     return model
 

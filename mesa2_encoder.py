@@ -58,6 +58,47 @@ def conv_filter3d_delta_coding(conv4d_indices, args, max_distance, pruned_filter
     return original, compressed
 
 
+def conv_part_filter3d_delta_coding(conv4d_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory):
+    # Sorted by absolute sum
+    sum_of_filters = np.sum(np.abs(conv4d_indices.reshape(conv4d_indices.shape[0], -1)), 1)
+    part_filters_num = 10  # hyperparameter
+    sorted_filters_indices = np.argsort(sum_of_filters)
+    part_filters_indices, left_filters_indices = sorted_filters_indices[:part_filters_num], sorted_filters_indices[part_filters_num:]
+    part_conv4d_indices, left_conv4d_indices = conv4d_indices[part_filters_indices, :, :, :], conv4d_indices[left_filters_indices, :, :, :]
+
+    original = compressed = 0
+    for indices4d in [part_conv4d_indices, left_conv4d_indices]:
+        first_filter = prev_filter = None
+        delta_filters = list()
+        for i, cur_filter in list(enumerate(indices4d)):
+            if i == 0:
+                first_filter = cur_filter
+            else:
+                delta_filters.append(matrix_cycledistance(prev_filter, cur_filter, max_distance))
+            prev_filter = cur_filter
+        delta_filters = np.array(delta_filters)
+
+        # print quantized indices statistics
+        for i in range(2 ** int(args.bits['conv']) + 1):
+            print(f'{i}: {get_index_percentage(indices4d, i) :.2f} % | {get_index_percentage(delta_filters, i) :.2f} %')
+
+        # Encode
+        t0, d0 = huffman_encode(first_filter.astype('float32'), directory)
+        t1, d1 = huffman_encode(delta_filters.astype('float32'), directory)
+        original += (first_filter.nbytes + delta_filters.nbytes)
+        compressed += (t0 + t1 + d0 + d1)
+
+    # Encode
+    t2, d2 = huffman_encode(pruned_filter_indices.astype('int32'), directory)
+    t3, d3 = huffman_encode(pruned_channel_indices.astype('int32'), directory)
+
+    # Get statistics
+    original += (pruned_filter_indices.nbytes + pruned_channel_indices.nbytes)
+    compressed += (t2 + t3 + d2 + d3)
+
+    return original, compressed
+
+
 def conv_width1d_delta_coding(conv4d_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory):
     indices2d = conv4d_indices.reshape(-1, conv4d_indices.shape[3])  # shape: (kn * cn * h, w)
     first_col = prev_col = None
@@ -130,16 +171,18 @@ def get_fc_delta_blocks(fc2d_indices, fc2d_arr, partition_size, max_distance):
 
 
 def mesa2_huffman_encode_conv4d(model, name, args, conv4d_arr, max_distance, directory):
-    if model.conv2pruneIndicesDict is None:
+    if model.convLayerName2pruneIndices is None:
         model.set_conv_indices_dict()
-    pruned_filter_indices, pruned_channel_indices = model.conv2pruneIndicesDict[name]
-    unpruned_conv_indices = util.get_unpruned_conv_weights(to_indices(conv4d_arr), model, name)
+    pruned_filter_indices, pruned_channel_indices = model.convLayerName2pruneIndices[name]
+    unpruned_conv_layer_indices = util.get_unpruned_conv_layer_weights(to_indices(conv4d_arr), model, name)
     if args.conv_loss_func == "filter3d-delta":
-        original, compressed = conv_filter3d_delta_coding(unpruned_conv_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
+        original, compressed = conv_filter3d_delta_coding(unpruned_conv_layer_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
+    elif args.conv_loss_func == "part-filter3d-delta":
+        original, compressed = conv_part_filter3d_delta_coding(unpruned_conv_layer_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
     elif args.conv_loss_func == "width1d-delta":
-        original, compressed = conv_width1d_delta_coding(unpruned_conv_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
+        original, compressed = conv_width1d_delta_coding(unpruned_conv_layer_indices, args, max_distance, pruned_filter_indices, pruned_channel_indices, directory)
     else:
-        original, compressed = conv_non_delta_coding(unpruned_conv_indices, pruned_filter_indices, pruned_channel_indices, directory)
+        original, compressed = conv_non_delta_coding(unpruned_conv_layer_indices, pruned_filter_indices, pruned_channel_indices, directory)
     return original, compressed
 
 

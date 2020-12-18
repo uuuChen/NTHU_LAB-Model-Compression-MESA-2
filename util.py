@@ -315,7 +315,7 @@ def conv_filter3d_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
             penalty_filters = 0
             for i in range(left_conv_weights.shape[0] - 1):
                 if 'filter' in mode:
@@ -337,11 +337,36 @@ def conv_filter3d_delta_penalty(model, device, penalty, mode):
     return penalty.to(device)
 
 
+def conv_part_filter3d_delta_penalty(model, device, penalty, mode):
+    penalty_layers = list()
+    part_filters_nums = 10  # hyperparameter
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
+
+            # Sorted by absolute sum
+            sum_of_filters = np.sum(np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1)
+            part_filters_indices = np.argsort(sum_of_filters)[:part_filters_nums]
+            part_conv_weights = left_conv_weights[part_filters_indices, :, :, :]
+
+            # Compute loss by part convolution weights
+            penalty_filters = 0
+            for i in range(part_conv_weights.shape[0] - 1):
+                penalty_filters += penalty(
+                    part_conv_weights[i, :, :, :],
+                    part_conv_weights[i+1, :, :, :]
+                )
+            penalty_filters /= (part_conv_weights.shape[0] - 1)
+            penalty_layers.append(penalty_filters)
+    penalty = torch.mean(torch.stack(penalty_layers))
+    return penalty.to(device)
+
+
 def conv_position_mean_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
             penalty_pos = 0
             for ch in range(left_conv_weights.shape[1]):
                 for i in range(left_conv_weights.shape[2]):
@@ -358,7 +383,7 @@ def conv_matrix2d_mean_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
             penalty_matrix2d = 0
             for kn in range(left_conv_weights.shape[0]):
                 for ch in range(left_conv_weights.shape[1]):
@@ -374,7 +399,7 @@ def conv_width1d_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
-            left_conv_weights = get_unpruned_conv_weights(module.weight, model, name)
+            left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
             matrix1ds_tensor = left_conv_weights.reshape(-1, left_conv_weights.shape[3])
             penalty_matrix1d = penalty(matrix1ds_tensor[:, :-1], matrix1ds_tensor[:, 1:])
             penalty_layers.append(penalty_matrix1d)
@@ -423,6 +448,8 @@ def get_layers_penalty(model, penalty, args, tok):
             conv_penalty = conv_position_mean_penalty(model, args.device, penalty, args.prune_mode)
         elif args.conv_loss_func == 'matrix2d-mean':
             conv_penalty = conv_matrix2d_mean_penalty(model, args.device, penalty, args.prune_mode)
+        elif args.conv_loss_func == 'part-filter3d-delta':
+            conv_penalty = conv_part_filter3d_delta_penalty(model, args.device, penalty, args.prune_mode)
         else:
             raise Exception
         all_penalty += args.beta * conv_penalty
@@ -434,10 +461,10 @@ def accuracy(output, target, topk=(1,)):
     batch_size = target.size(0)
     _, pred = output.topk(maxk, 1, largest=True, sorted=True)  # pred shape: (batch_size, k)
     pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    correct = pred.eq(target.reshape(1, -1).expand_as(pred))
     res = list()
     for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0)
+        correct_k = correct[:k].reshape(-1).float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
@@ -462,12 +489,12 @@ def get_part_model_original_bytes(model, args):
     return model_bytes
 
 
-def get_unpruned_conv_weights(conv_weights, model, name):
-    if model.conv2leftIndicesDict is None:
+def get_unpruned_conv_layer_weights(layer_weights, model, name):
+    if model.convLayerName2leftIndices is None:
         model.set_conv_indices_dict()
-    left_filter_indices, left_channel_indices = model.conv2leftIndicesDict[name]
-    unpruned_conv_weights = conv_weights[left_filter_indices, :, :, :][:, left_channel_indices, :, :]
-    return unpruned_conv_weights
+    left_filter_indices, left_channel_indices = model.convLayerName2leftIndices[name]
+    unpruned_weights = layer_weights[left_filter_indices, :, :, :][:, left_channel_indices, :, :]
+    return unpruned_weights
 
 
 class AverageMeter(object):
