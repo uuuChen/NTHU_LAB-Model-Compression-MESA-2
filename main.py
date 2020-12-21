@@ -74,7 +74,7 @@ parser.add_argument('--conv-loss-func', '-clf', type=str, default='filter3d-delt
 
 # ------------- quantize process ----------------------------------------------------
 parser.add_argument('--qauntize_epochs', '-qep', default=20, type=int, metavar='N',  help='number of quantize retrain epochs to run (default: 20)')
-parser.add_argument('--quantize-retrain-lr', '-qrlr', default=0.00001, type=float,  metavar='QRLR', help='quantize retrain learning rate')
+parser.add_argument('--quantize-retrain-lr', '-qrlr', default=1e-5, type=float,  metavar='QRLR', help='quantize retrain learning rate')
 parser.add_argument('--bits', '-b', action=StoreDictKeyPair, metavar="KEY1=VAL1,KEY2=VAL2...", help='partition size of fc layer (eg. conv=8,fc=5)')
 
 # ------------- encoding process  ----------------------------------------------------

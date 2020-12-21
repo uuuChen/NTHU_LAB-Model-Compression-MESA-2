@@ -35,8 +35,10 @@ def load_checkpoint(model, file, args):
     if os.path.isfile(file):
         print(f"=> loading checkpoint '{file}'")
         checkpoint = torch.load(file)
-        best_top1_acc = checkpoint['best_prec1']
-        # best_top1_acc = checkpoint['best_top1_acc']
+        try:
+            best_top1_acc = checkpoint['best_prec1']
+        except KeyError:
+            best_top1_acc = checkpoint['best_top1_acc']
         model.load_state_dict(checkpoint['state_dict'])
         print(f"=> loaded checkpoint '{args.evaluate}'")
     else:
@@ -108,7 +110,7 @@ def initial_train(model, args, train_loader, val_loader, tok):
         top1_acc, top5_acc = validate(val_loader, model, args, topk=(1, 5))  # evaluate on validation set
 
         # record best top1_acc and save checkpoint
-        if args.best_top1_acc < top1_acc or tok == "prune_retrain":
+        if args.best_top1_acc < top1_acc:
             model = save_masked_checkpoint(model, tok, top1_acc, epoch, args)
             log(args.log_file_path, f"[epoch {epoch}]")
             log(args.log_file_path, f"initial_accuracy\t{top1_acc} ({top5_acc})")
@@ -364,29 +366,27 @@ def conv_part_filter3d_delta_penalty(model, device, penalty, mode):
 
 def conv_group_filter3d_delta_penalty(model, device, penalty, mode):
     penalty_layers = list()
-    filters_nums_per_group = 10  # hyperparameter
+    filters_nums_per_group = 5  # hyperparameter
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
             left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
 
-            # Sorted by absolute sum
+            # Sorted by absolute sum and compute loss by sum of each group of convolution weights
             sum_of_filters = np.sum(np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1)
             sorted_filters_indices = np.argsort(sum_of_filters)
-            groups_filters_indices = list()
-            for i in range(0, len(sorted_filters_indices), filters_nums_per_group):
-                groups_filters_indices.append(sorted_filters_indices[i:i+filters_nums_per_group])
-
-            # Compute loss by sum of each group of convolution weights
             penalty_filters = 0
-            for group_filters_indices in groups_filters_indices:
+            num_of_groups = 0
+            for i in range(0, len(sorted_filters_indices), filters_nums_per_group):
+                num_of_groups += 1
+                group_filters_indices = sorted_filters_indices[i:i+filters_nums_per_group]
                 group_conv_weights = left_conv_weights[group_filters_indices, :, :, :]
                 if group_conv_weights.shape[0] > 1:  # Need at least two filter to compute loss
-                    for i in range(group_conv_weights.shape[0] - 1):
+                    for j in range(group_conv_weights.shape[0] - 1):
                         penalty_filters += penalty(
-                            group_conv_weights[i, :, :, :],
-                            group_conv_weights[i+1, :, :, :]
+                            group_conv_weights[j, :, :, :],
+                            group_conv_weights[j+1, :, :, :]
                         )
-            penalty_filters /= (left_conv_weights.shape[0] - len(groups_filters_indices))
+            penalty_filters /= (left_conv_weights.shape[0] - num_of_groups)
             penalty_layers.append(penalty_filters)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
@@ -430,9 +430,9 @@ def conv_width1d_delta_penalty(model, device, penalty, mode):
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
             left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
-            matrix1ds_tensor = left_conv_weights.reshape(-1, left_conv_weights.shape[3])
-            penalty_matrix1d = penalty(matrix1ds_tensor[:, :-1], matrix1ds_tensor[:, 1:])
-            penalty_layers.append(penalty_matrix1d)
+            width1ds_tensor = left_conv_weights.reshape(-1, left_conv_weights.shape[3])
+            penalty_width1d = penalty(width1ds_tensor[:, :-1],width1ds_tensor[:, 1:])
+            penalty_layers.append(penalty_width1d)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
 

@@ -184,13 +184,13 @@ class PruningModule(Module):
                 conv_arr = module.weight.data.cpu().numpy()
                 perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
 
-                pruned_filter_indices = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
-                pruned_channel_indices = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
+                pruned_filters_indices = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
+                pruned_channels_indices = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
 
-                left_filter_indices = list(set(range(conv_arr.shape[0])).difference(pruned_filter_indices))
-                left_channel_indices = list(set(range(perm_conv_arr.shape[0])).difference(pruned_channel_indices))
+                left_filter_indices = list(set(range(conv_arr.shape[0])).difference(pruned_filters_indices))
+                left_channel_indices = list(set(range(perm_conv_arr.shape[0])).difference(pruned_channels_indices))
 
-                self.convLayerName2pruneIndices[name] = (pruned_filter_indices, pruned_channel_indices)
+                self.convLayerName2pruneIndices[name] = (pruned_filters_indices, pruned_channels_indices)
                 self.convLayerName2leftIndices[name] = (left_filter_indices, left_channel_indices)
 
 
