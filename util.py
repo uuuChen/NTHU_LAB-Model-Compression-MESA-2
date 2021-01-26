@@ -1,16 +1,18 @@
-# System
 import os
-import torch
 import time
 import numpy as np
+import matplotlib.pyplot as plt
+from random import shuffle
+from enum import Enum, auto
+from collections import namedtuple
+
+import torch
+import torchvision.utils as vutils
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
-import torchvision.utils as vutils
 
-# Custom
 from prune import MaskedConv2d
 
 
@@ -86,10 +88,15 @@ def print_nonzeros(model, log_file):
         total_params = np.prod(tensor.shape)
         nonzero += nz_count
         total += total_params
-        log(log_file, f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
-        print(f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
-    log(log_file, f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : {total/nonzero:10.2f}x  ({100 * (total-nonzero) / total:6.2f}% pruned)')
-    print(f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : {total/nonzero:10.2f}x ({100 * (total-nonzero) / total:6.2f}% pruned)')
+        log(log_file,
+            f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%) '
+            f'| total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
+        print(f'{name:25} | nonzeros = {nz_count:7} / {total_params:7} ({100 * nz_count / total_params:6.2f}%)'
+              f' | total_pruned = {total_params - nz_count :7} | shape = {tensor.shape}')
+    log(log_file, f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : '
+                  f'{total/nonzero:10.2f}x  ({100 * (total-nonzero) / total:6.2f}% pruned)')
+    print(f'alive: {nonzero}, pruned : {total - nonzero}, total: {total}, Compression rate : '
+          f'{total/nonzero:10.2f}x ({100 * (total-nonzero) / total:6.2f}% pruned)')
 
 
 def initial_train(model, args, train_loader, val_loader, tok):
@@ -308,7 +315,12 @@ def show_quantized_channel2ds(model):
             for k in range(5):
                 plt.axis("off")
                 plt.title(f"Conv layer {conv_layer_index}-{k}")
-                plt.imshow(np.transpose(vutils.make_grid(torch.unsqueeze(conv4d[k, :, :, :][:64], dim=1), padding=5, normalize=True).cpu(), (1, 2, 0)))
+                images = np.transpose(
+                    vutils.make_grid(
+                        torch.unsqueeze(conv4d[k, :, :, :][:64], dim=1), padding=5, normalize=True
+                    ).cpu(), (1, 2, 0)
+                )
+                plt.imshow(images)
                 plt.show()
             conv_layer_index += 1
 
@@ -347,7 +359,9 @@ def conv_part_filter3d_delta_penalty(model, device, penalty, mode):
             left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
 
             # Sorted by absolute sum
-            sum_of_filters = np.sum(np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1)
+            sum_of_filters = np.sum(
+                np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1
+            )
             part_filters_indices = np.argsort(sum_of_filters)[:part_filters_nums]
             part_conv_weights = left_conv_weights[part_filters_indices, :, :, :]
 
@@ -371,9 +385,17 @@ def conv_group_filter3d_delta_penalty(model, device, penalty, mode):
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
             left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
 
-            # Sorted by absolute sum and compute loss by sum of each group of convolution weights
-            sum_of_filters = np.sum(np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1)
-            sorted_filters_indices = np.argsort(sum_of_filters)
+            # # Sorted by absolute sum and compute loss by sum of each group of convolution weights
+            # sum_of_filters = np.sum(
+            #     np.abs(left_conv_weights.data.cpu().numpy().reshape(left_conv_weights.shape[0], -1)), 1
+            # )
+            # sorted_filters_indices = np.argsort(sum_of_filters)
+
+            # Sorted by ShortestPathFinder
+            shortest_path_finder = ShortestPathFinder(left_conv_weights.data.cpu().numpy())
+            sorted_filters_indices = shortest_path_finder.search(method_str='random', ).nodes_id
+            print(sorted_filters_indices)
+
             penalty_filters = 0
             num_of_groups = 0
             for i in range(0, len(sorted_filters_indices), filters_nums_per_group):
@@ -431,7 +453,7 @@ def conv_width1d_delta_penalty(model, device, penalty, mode):
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, MaskedConv2d):
             left_conv_weights = get_unpruned_conv_layer_weights(module.weight, model, name)
             width1ds_tensor = left_conv_weights.reshape(-1, left_conv_weights.shape[3])
-            penalty_width1d = penalty(width1ds_tensor[:, :-1],width1ds_tensor[:, 1:])
+            penalty_width1d = penalty(width1ds_tensor[:, :-1], width1ds_tensor[:, 1:])
             penalty_layers.append(penalty_width1d)
     penalty = torch.mean(torch.stack(penalty_layers))
     return penalty.to(device)
@@ -557,3 +579,64 @@ def adjust_learning_rate(optimizer, epoch, args, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = adj_lr
     return optimizer
+
+
+class ShortestPathFinder:
+    def __init__(self, nodes, max_iter_min=2.0):
+        self._init()
+        self.nodes = nodes
+        self.max_iter_time = max_iter_min * 60
+
+    def _init(self):
+        self.shortest_selected_nodes_id = list()
+        self.shortest_dist = -1
+        self.global_step = None
+        self.s_time = time.time()
+
+    def compute_path_distance(self, nodes_id):
+        sorted_nodes = self.nodes[nodes_id]
+        return np.sum(np.power(sorted_nodes[1:] - sorted_nodes[:-1], 2))
+
+    def search(self, method_str='random'):
+        self._init()
+        method = self.Method[method_str.upper()]
+        if method is self.Method.RANDOM:
+            self._find_approximate_shortest_path_by_random_search()
+        elif method is self.Method.OPTIMIZE:
+            self._find_optimized_shortest_path(set(range(len(self.nodes))), list())
+        else:
+            raise KeyError(method_str)
+        return self._get_output_tuple()
+
+    def _get_output_tuple(self):
+        output = namedtuple("output", ["dist", "nodes_id"])
+        return output(self.shortest_dist, self.shortest_selected_nodes_id)
+
+    def _find_optimized_shortest_path(self, left_nodes_id, selected_nodes_id):
+        if len(left_nodes_id) == 0:
+            path_dist = self.compute_path_distance(selected_nodes_id)
+            # print(selected_nodes_id, path_dist, self.shortest_dist)
+            if len(self.shortest_selected_nodes_id) == 0 or path_dist < self.shortest_dist:
+                self.shortest_selected_nodes_id = selected_nodes_id
+                self.shortest_dist = path_dist
+        else:
+            for _id in left_nodes_id:
+                _left_nodes_id = left_nodes_id.copy()
+                _left_nodes_id.remove(_id)
+                _selected_nodes_id = selected_nodes_id + [_id]
+                self._find_optimized_shortest_path(_left_nodes_id, _selected_nodes_id)
+
+    def _find_approximate_shortest_path_by_random_search(self):
+        node_ids = list(range(len(self.nodes)))
+        while True:
+            shuffle(node_ids)
+            path_dist = self.compute_path_distance(node_ids)
+            if len(self.shortest_selected_nodes_id) == 0 or path_dist < self.shortest_dist:
+                self.shortest_selected_nodes_id = node_ids
+                self.shortest_dist = path_dist
+            if time.time() - self.s_time >= self.max_iter_time:
+                break
+
+    class Method(Enum):
+        OPTIMIZE = auto()
+        RANDOM = auto()

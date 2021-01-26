@@ -94,7 +94,13 @@ def mask(in_weight, out_weight, partition_size):
 
     a = np.full((row, col), 1, dtype=int)
     binary_mask = np.kron(np.eye(partition_size), a)
-    real_binary_mask = np.pad(binary_mask, ((0, out_weight % partition_size), (0, in_weight % partition_size)), 'constant', constant_values=(0, 0))  # to make it able to divide
+    real_binary_mask = np.pad(
+        binary_mask,
+        ((0, out_weight % partition_size), (0, in_weight % partition_size)),
+        'constant',
+        constant_values=(0, 0)
+    )  # to make it able to divide
+
     return row, col, row_permu, col_permu, torch.from_numpy(real_binary_mask)
 
 
@@ -126,21 +132,27 @@ class AlexNetMask(PruningModule):
 
         # self.fc1= nn.Linear(12544,4096)
         self.fc1 = nn.Linear(256, 4096)
-        self.block_row_size1, self.block_col_size1, self.rowp1, self.colp1, self.mask1 = mask(256, 4096, int(partitions['fc1']))
+        self.block_row_size1, self.block_col_size1, self.rowp1, self.colp1, self.mask1 = mask(
+            256, 4096, int(partitions['fc1'])
+        )
         self.invrow1 = inverse_permutation(self.rowp1)
         self.invcol1 = inverse_permutation(self.colp1)
         self.fc1.weight = torch.nn.Parameter(self.fc1.weight * self.mask1.float())
         self.fc1.weight.register_hook(fc1_hook)
         
         self.fc2 = nn.Linear(4096, 4096)
-        self.block_row_size2, self.block_col_size2, self.rowp2, self.colp2, self.mask2 = mask(4096, 4096, int(partitions['fc2']))
+        self.block_row_size2, self.block_col_size2, self.rowp2, self.colp2, self.mask2 = mask(
+            4096, 4096, int(partitions['fc2'])
+        )
         self.invrow2 = inverse_permutation(self.rowp2)
         self.invcol2 = inverse_permutation(self.colp2)
         self.fc2.weight = torch.nn.Parameter(self.fc2.weight * self.mask2.float())
         self.fc2.weight.register_hook(fc2_hook)
 
         self.fc3 = nn.Linear(4096, num_of_class)
-        self.block_row_size3, self.block_col_size3, self.rowp3, self.colp3, self.mask3 = mask(4096, num_of_class, int(partitions['fc3']))
+        self.block_row_size3, self.block_col_size3, self.rowp3, self.colp3, self.mask3 = mask(
+            4096, num_of_class, int(partitions['fc3'])
+        )
         self.invrow3 = inverse_permutation(self.rowp3)
         self.invcol3 = inverse_permutation(self.colp3)
         self.fc3.weight = torch.nn.Parameter(self.fc3.weight * self.mask3.float())

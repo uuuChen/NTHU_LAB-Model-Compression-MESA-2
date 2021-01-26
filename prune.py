@@ -146,7 +146,9 @@ class PruningModule(Module):
                 # (1 - prune_rate) = ((fn * (1 - new_prune_rate)) * (cn - Prune_filter_nums) * kh * kw) / (fn * cn * kh
                 # * kw)
                 if conv_idx != 0:
-                    target_filter_prune_rate = 1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
+                    target_filter_prune_rate = (
+                        1 - ((1 - target_filter_prune_rate) * (channel_nums / (channel_nums - prune_filter_nums)))
+                    )
 
                 prune_filter_nums = round(filter_nums * target_filter_prune_rate)
                 actual_filter_prune_rate = prune_filter_nums / filter_nums
@@ -184,8 +186,12 @@ class PruningModule(Module):
                 conv_arr = module.weight.data.cpu().numpy()
                 perm_conv_arr = np.transpose(conv_arr, (1, 0, 2, 3))  # (fn, cn, kh, kw) => (cn, fn, kh, kw)
 
-                pruned_filters_indices = np.where(np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0)[0]
-                pruned_channels_indices = np.where(np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0)[0]
+                pruned_filters_indices = np.where(
+                    np.sum(conv_arr.reshape(conv_arr.shape[0], -1), axis=1) == 0
+                )[0]
+                pruned_channels_indices = np.where(
+                    np.sum(perm_conv_arr.reshape(perm_conv_arr.shape[0], -1), axis=1) == 0
+                )[0]
 
                 left_filter_indices = list(set(range(conv_arr.shape[0])).difference(pruned_filters_indices))
                 left_channel_indices = list(set(range(perm_conv_arr.shape[0])).difference(pruned_channels_indices))
@@ -195,7 +201,18 @@ class PruningModule(Module):
 
 
 class _ConvNd(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation, transposed, output_padding, groups, bias):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 stride,
+                 padding,
+                 dilation,
+                 transposed,
+                 output_padding,
+                 groups,
+                 bias):
+
         super(_ConvNd, self).__init__()
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -253,7 +270,9 @@ class MaskedConv2d(_ConvNd):
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
-        super(MaskedConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation,  False, _pair(0), groups, bias)
+        super(MaskedConv2d, self).__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation,  False, _pair(0), groups, bias
+        )
 
     def forward(self, input):
         return F.conv2d(input, self.weight*self.mask, self.bias, self.stride, self.padding, self.dilation, self.groups)
